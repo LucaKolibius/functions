@@ -281,7 +281,7 @@ zscoreopt = inputdlg('Would you like to perform global z-scoring of the data bef
 if strcmp(zscoreopt,'y')
     cfg.preprocess  = 'zscore';
 end
-cfg.classifier  = 'lda';
+cfg.classifier  = 'lda'; % linear discriminant analysis
 cfg.metric      = {'acc'};
 cfg.repeat      = 5;
 cfg.cv          = 'kfold';

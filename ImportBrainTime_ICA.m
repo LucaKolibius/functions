@@ -1,4 +1,5 @@
 %% This script transforms FieldTrip EEG data from clock time into brain time and runs MVPA classification on it.
+% By Sander van Bree, María Melcón, and Simon Hanslmayr (April 2020)
 % Step 1: Import EEG data, layout and set parameters
 % Step 2: Filter data based on parameters fft_min and fft_max
 % Step 3: Run ICA on filtered data
@@ -10,9 +11,8 @@
 % Step 9: Warp component's data to template phase vector (based on peak oscillation)
 % Step 10: Run MVPA light on warped data to get brain time TGMs
 
-clear all
-
-uiwait(msgbox({'Transforms EEG clock time into EEG brain time and calculates a time generalization matrix'}))   
+uiwait(msgbox({'Transforms EEG clock time into EEG brain time and calculates a time generalization matrix';' ';...
+    'By Sander van Bree, María Melcón, and Simon Hanslmayr (April 2020)'}))   
 uiwait(msgbox({'Required toolboxes: MVPA light, FieldTrip, PsychToolbox';...
     'Required scripts: findpeaks.m';' ';...
     'Before running this script, please ensure that your EEG dataset:';...
@@ -26,22 +26,21 @@ uiwait(msgbox({'Required toolboxes: MVPA light, FieldTrip, PsychToolbox';...
 %Step 1.1: Import data   
 inputpath = inputdlg('Good day. What is the PATH of your FieldTrip formatted EEG dataset? (TO DEV: WRITE maria OR sander');
 if strcmp(inputpath,'maria')
-    %     cd('D:\Birmingham\datos\s4') % LDK
-    cd('C:\Users\Luca\Downloads')
+    cd('D:\Birmingham\datos\s4')
     load datos_limpios
     cfg         = [];
     cfg.channel = {'all' '-REF' '-HEOG1' '-HEOG2' '-VEOG1' '-VEOG2'};
     data        = ft_preprocessing(cfg,data);
-%     cd('D:\Birmingham\script') % LDK
+    cd('D:\Birmingham\script')
     layoutfile='biosemi128_1005xx.lay';
 elseif strcmp(inputpath,'sander')
-    cd \\its-rds\nr-castles\projects\w\wimberm-ieeg-compute\Sander\TGM\retrieval_data\
-    load ani_retrieval_DS
-    data = ani_retrieval_DS;
+    subjnum = inputdlg('Subject name');
+    cd \\its-rds\nr-castles\projects\w\wimberm-ieeg-compute\Sander\TGM\ClockToBrainTime\Hippocampal_ClockToBrainTime\SourceData\
+    currsubj = strcat('hcdata_',subjnum{1},'.mat');
+    load(currsubj)
+    data = hcdata;
     cd \\its-rds\nr-castles\projects\w\wimberm-ieeg-compute\Sander\TGM\ClockToBrainTime\
-    load('lay.mat');
-    layoutfile = lay;
-else  % LDK: this will ask twice for the datapath if you do not input sander or maria
+else
     promp     = {'Good day. What is the PATH of your FieldTrip formatted EEG dataset?','What is the NAME of your EEG dataset?','What is the FOLDER of your EEG layout file','What is the NAME of your EEG layout file'};
     answer    = inputdlg(promp);
     inputpath = answer{1};
@@ -57,14 +56,14 @@ end
 
 %Step 1.2: Parameters
 prompt = {'How many components do you want to get from the ICA? (by default, number of sensors)'};
-dlgtitle = 'Number of component';%
+dlgtitle = 'Number of component';
 dims = 1;
 definput = {num2str(size(data.label,1))};
 nc = inputdlg(prompt,dlgtitle,dims,definput);
 ncmp  = str2double(nc{1});
 
 promp  = {'To find peaks in your ICA transformed data, we need to apply a band pass filter. What frequency would you like to use for the high pass filter? (e.g. 2)','What frequency would you like to use for the low pass filter? (e.g. 30)'};
-fft  = inputdlg(promp); % LDK try to avoid using variables that are aleary used to call a function
+fft  = inputdlg(promp);
 fft_min  = str2double(fft{1});
 fft_max  = str2double(fft{2});
 
@@ -73,11 +72,22 @@ freq  = inputdlg(promp);
 freq_min  = str2double(freq{1});
 freq_max  = str2double(freq{2});
 
-promp  = {'To perform the time frequency analysis, what is your time window of interest on wich it should be centered (in second)? We use 0.005 s steps. From (e.g. 0)','To (e.g. 1)'};
-toi  = inputdlg(promp);
-toi_min  = str2double(toi{1});
-toi_max  = str2double(toi{2});
+% promp  = {'Resampling will speed up the script a lot. What should be the new sampling rate? (e.g. 256; cancel = no resampling)'};
+% resample  = inputdlg(promp);
+% if isempty(resample{1})~=1
+% cfg = [];
+% cfg.resamplefs = str2double(resample{1});
+% data = ft_resampledata(cfg,data);
+% end
 
+promp  = {'To perform the time frequency analysis, what is your time window of interest on which it should be centered (in second)? We use 0.005 s steps. From (e.g. 0)','To (e.g. 1)'};
+toi  = inputdlg(promp);
+t_min  = str2double(toi{1});
+t_max  = str2double(toi{2});
+
+toi_min  = data.time{1}(1,findnearest(data.time{1},t_min));
+toi_max  = data.time{1}(1,findnearest(data.time{1},t_max));
+toi_step = data.time{1}(1,2)-data.time{1}(1,1);% original rata sampling rate for frequency analysis
 
 %% Step 2: Filter data
 cfg               = [];
@@ -103,16 +113,16 @@ end
 cfgtf           = [];
 cfgtf.method    = 'wavelet';
 cfgtf.width     = 5;
-cfgtf.toi       = toi_min:0.005:toi_max;
-cfgtf.foilim    = [fft_min fft_max];
+cfgtf.toi       = toi_min:toi_step:toi_max;
+cfgtf.foi       = (fft_min:1:fft_max);
 cfgtf.output    = 'fourier';
 fspec           = ft_freqanalysis(cfgtf,temp_comp);
 fspec.powspctrm = abs(fspec.fourierspctrm);
 
 %% Step 5: Find peaks in and phase of components
 for cmp = 1:ncmp
-    powtf(:,:,cmp)=squeeze(nanmean(fspec.powspctrm(:,cmp,:,:),1)); % average over trials
-    pspec(:,cmp)=squeeze(nanmean(powtf(:,:,cmp),2)); %get power spectrum of components (average over time)
+    powtf(:,:,cmp)=squeeze(nanmean(fspec.powspctrm(:,cmp,:,:),1));
+    pspec(:,cmp)=squeeze(nanmean(powtf(:,:,cmp),2)); %get power spectrum of components
     [~,oscpeak{cmp}]=findpeaks(pspec(:,cmp),'SortStr','descend');% what's the dominant oscillation for current chan?
     if isempty(oscpeak{cmp}) == 1 %if no clear peak, grab max power channel
         oscpeak{cmp} = find(pspec(:,cmp)==max(pspec(:,cmp)));
@@ -122,10 +132,6 @@ for cmp = 1:ncmp
     phs{cmp}=squeeze(angle(fspec.fourierspctrm(:,cmp,oscpeak{cmp},:))); %Simon: don't average around dominant osc, just use dominant osc
 end
 
-% for ind = 1:ncmp
-%     phs{ind}(isnan(phs{ind}))=0;
-%     endest 
-% end
 oscpeak = cell2mat(oscpeak); %get the dominant oscillation vector into array
 
 %% Step 6: Find components that have a dominant oscillation in the frequency of interest range
@@ -142,12 +148,13 @@ while isempty(foicomps)
 end
 
 ind1 = 1;
-pspec_comp = zeros(2,numel(foicomps)); % LDK: zeros(numel(foicomps), 2)
+pspec_comp = zeros(numel(foicomps),2);
 for ind2 = foicomps
     pspec_comp(ind1,1)=pspec(oscpeak(ind2),ind2);
     pspec_comp(ind1,2)=ind2;
     ind1 = ind1+1;
 end
+pspec_comp = round(pspec_comp);
 
 %% Step 7: Sort components with most power at peak (descending)
 pspec_comp=sortrows(pspec_comp,1,'descend'); %sort components from highest to lowest average power
@@ -175,7 +182,11 @@ while ic <= size(pspec_comp,1)
     cfg.comment   = 'no';
     ft_topoplotIC(cfg, comp)
     colorbar
-    
+    lim=max(abs(comp.topo(:,pspec_comp(ic,2))));
+    lim=lim+(lim/100*10);
+    caxis([-lim lim])
+    title({[num2str(ic) '/' num2str(size(pspec_comp,1)) ' Components'] ['Component ' num2str(pspec_comp(ic,2))]})
+
     % time-frequency plot
     subplot(5,2,[2 4 6 8]);
     pcolor(fspec.time,fspec.freq,powtf(:,:,pspec_comp(ic,2)));
@@ -209,47 +220,49 @@ end
 
 %remove the component from original data
 cfg           = [];
-cfg.component = coi; % LDK: component of interest
+cfg.component = coi;
 data          = ft_rejectcomponent (cfg, comp, data_bp);
+
+% cut out the time window of interest
+cfg        = [];
+cfg.toilim = [t_min t_max];
+data       = ft_redefinetrial(cfg, data);
 
 %% Step 9: Warp component's data to template phase vector (based on peak oscillation)
 % Re-Organize EEG data by phase
 % split data into two datasets by condition
 ntrls=length(data.trial);
 cfg=[];
-cfg.trials=1:round(ntrls/2); % the first 60 trials belong to
-dat1=ft_selectdata(cfg,data); % dat1
-cfg.trials=round(ntrls/2)+1:ntrls; % the second 60 trials belong to
-dat2=ft_selectdata(cfg,data); % dat2
+cfg.trials=1:round(ntrls/2);
+dat1=ft_selectdata(cfg,data);
+cfg.trials=round(ntrls/2)+1:ntrls;
+dat2=ft_selectdata(cfg,data);
 
 %Get phase for each condition
-dat1_bt=dat1; % LDK: this is dangerous as its being overwritten in the next loop
+dat1_bt=dat1;
 dat2_bt=dat2;
-phs1=phs{coi}(1:round(ntrls/2),:); % first half of trials
-phs2=phs{coi}(round(ntrls/2)+1:end,:); % second half of trials
-Ncycles=fspec.freq(oscpeak(coi)); % the peak frequency of the component (9.5 Hz)
-phs_sr = 2000; %sample rate of the unwrapped phase % why 2k?
-tempphs=linspace(-pi,(2*pi*Ncycles)-pi,phs_sr);% set up phase bins for unwrapped phase (angular frequency) (this increases linearally)
-timephs=linspace(0,Ncycles,phs_sr)+1; %time vector of the unwrapper phase (also increases linerally)
-
+phs1=phs{coi}(1:round(ntrls/2),:);
+phs2=phs{coi}(round(ntrls/2)+1:end,:);
+nsec=data.time{1}(1,end)-data.time{1}(1,1);
+Ncycles=fspec.freq(oscpeak(coi))*nsec; %number of cycles * seconds
+promp  = {'To dynamically time warp the original data based on the chosen component''s data, we need a new sampling rate. High sampling rate is important for high frequencies of interest, but slows down classificaiton a lot. (e.g. 256.)'};
+phs_sr = inputdlg(promp);
+phs_sr = str2double(phs_sr{1});
+tempphs=linspace(-pi,(2*pi*Ncycles)-pi,phs_sr);% set up phase bins for unwrapped phase (angular frequency)
+timephs=linspace(0,Ncycles,phs_sr)+1; %time vector of the unwrapper phase
 
 for nt=1:round(ntrls/2)
-    tmpphs1=unwrap(phs1(nt,:)); % phs1(nt,:) goes from -pi to pi & tmpphs1 goes linerally from -2.3 to 57
+    tmpphs1=unwrap(phs1(nt,:));
     tmpphs2=unwrap(phs2(nt,:));
     % Warp phase of single trial onto template phase
-    [~,ix1,~] = dtw(tmpphs1,tempphs); % distance, warping path (ix and iy). tmpphas1 only has 200 entries, tempphs has 2000
+    [~,ix1,~] = dtw(tmpphs1,tempphs);
     [~,ix2,~] = dtw(tmpphs2,tempphs);
 
     % Create warped trials
     tmptrl1=dat1.trial{1,nt}(:,ix1);
     tmptrl2=dat2.trial{1,nt}(:,ix2);
-    
-    tmptim1=timephs(ix1); % LDK: This is not being used
-    tmptim2=timephs(ix2);
-    
-    dat1_bt.trial{1,nt}=imresize(tmptrl1,[size(tmptrl1,1) numel(tempphs)]); % LDK: why resize?
+    dat1_bt.trial{1,nt}=imresize(tmptrl1,[size(tmptrl1,1) numel(tempphs)]);
     dat2_bt.trial{1,nt}=imresize(tmptrl2,[size(tmptrl2,1) numel(tempphs)]);    
-    
     dat1_bt.time{1,nt}=timephs;
     dat2_bt.time{1,nt}=timephs;
 end
@@ -281,12 +294,23 @@ zscoreopt = inputdlg('Would you like to perform global z-scoring of the data bef
 if strcmp(zscoreopt,'y')
     cfg.preprocess  = 'zscore';
 end
-cfg.classifier  = 'lda'; % linear discriminant analysis
-cfg.metric      = {'acc'};
+perfmetric = inputdlg('Would you like the performance metric for classification to be decision-values (dval; distance from hyperplane) or accuracy (acc)? write acc or dval');
+cfg.classifier  = 'lda';
+cfg.metric      = perfmetric{1};
 cfg.repeat      = 5;
 cfg.cv          = 'kfold';
 cfg.k           = 5;
 [TGM_perf, TGM_perf_specs] = mv_classify_timextime(cfg, fulldata.trial, clabel);
+
+%if user chose dval, continue with only one class
+if strcmp(perfmetric{1},'dval')==1
+TGM_perf = squeeze(TGM_perf(:,1,:));
+end
+
+zscoreopt2 = inputdlg('Would you like to perform z-scoring of the TGMs? Recommended for decision value data. Type y or n');
+if strcmp(zscoreopt2,'y')
+   TGM_perf = zscore(TGM_perf,0,'all');
+end
 
 %Grab time vector
 timevec = fulldata.time;
@@ -316,91 +340,4 @@ xlabel('Cycle number test data')
 
 %% Step 11: Save TGM
 savefold = strcat(savepath,'TGM_braintime');
-save(savefold, 'TGM_perf', 'TGM_perf_specs', 'TGM_perf_smooth', 'clabel', 'timevec', '-v7.3');
-
-
-%% visu ICA comp
-compNum = pspec_comp(1,2);
-compSer = comp.trial{1}(compNum, :); % component series for trial 1
-compPow = pspec(:,compNum); % power spectrum of this component
-freqVec = fspec.freq;
-cmpPeak = fspec.freq(oscpeak(compNum));
-
-figure;
-subplot(221)
-plot(compSer ,'linew', 3);
-xlabel('Time in Samples')
-ylabel('Component Amplitude')
-title('ICA Component Time Series')
-ylim([-max(abs(get(gca,'YLim'))) max(abs(get(gca,'YLim')))])
-mAx = gca;
-mAx.FontWeight = 'bold';
-mAx.FontSize = 14;
-
-subplot(223)
-plot(freqVec, compPow, 'linew', 3); hold on
-plot([cmpPeak cmpPeak], [get(gca,'Ylim')], 'linew', 2, 'color', 'k');
-plot([])
-xlim([2 30]);
-xlabel('Frequency')
-ylabel('Power')
-title(' ICA Component Powerspectrum')
-mAx = gca;
-mAx.FontWeight = 'bold';
-mAx.FontSize = 14;
-
-%% ged component
-alphafreq = 10;
-fwhm = 7.5; % maybe increase for a broader component
-pnts = size(data.trial{1},2);
-alphacov = zeros(128);
-bbcov = zeros(128);
-trialnum = size(data.trial,2);
-for trl = 1: trialnum
-    
-alphafilt = filterFGx(data.trial{trl},data.fsample,alphafreq,fwhm); % filter data in alpha frequency
-alphafilt = bsxfun(@minus,alphafilt,mean(alphafilt,2)); % demean
-tempcov  = (alphafilt*alphafilt')/pnts; % alpha band covariance matrix so the alpha covariance between channels
-alphacov = alphacov + tempcov;
-
-% broadband covariance 
-tmpdat = bsxfun(@minus,data.trial{trl},mean(data.trial{trl},2)); % demean broadband data
-tempcov  = (tmpdat*tmpdat')/pnts; % compute broadband covariance matrix
-bbcov = bbcov+tempcov;
-
-end
-
-alphacov = alphacov / trialnum;
-bbcov = bbcov / trialnum;
-
-% GED
-[evecsT,evals] = eig(alphacov,bbcov); % compute eigenvalues between alpha covariance matrix and broadband covariance matrix
-[~,maxcomp] = sort(diag(evals)); % index of the biggest component
-
-% visu
-alphacomp = alphafilt' * evecsT(:,maxcomp(end));
-
-
-subplot(222)
-plot(alphacomp, 'linew', 3)
-ylim([-max(abs(get(gca,'YLim'))) max(abs(get(gca,'YLim')))])
-xlabel('Time in Samples')
-ylabel('Component Amplitude')
-title('GED Component Time Series')
-ylim([-max(abs(get(gca,'YLim'))) max(abs(get(gca,'YLim')))])
-mAx = gca;
-mAx.FontWeight = 'bold';
-mAx.FontSize = 14;
-
-
-subplot(224)
-clear fft
-hz = linspace(0,data.fsample,pnts);
-plot(hz,abs(fft(alphacomp)), 'linew', 3)
-xlim([0 30])
-xlabel('Frequency')
-ylabel('Power')
-title(' GED Component Powerspectrum')
-mAx = gca;
-mAx.FontWeight = 'bold';
-mAx.FontSize = 14;
+save(savefold, 'TGM_perf_smooth', 'TGM_perf_specs', 'TGM_perf', 'clabel', 'timevec', '-v7.3');
