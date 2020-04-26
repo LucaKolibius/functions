@@ -8,8 +8,8 @@ addpath('X:\Luca\functions\Neuralynx_19012019'); % Neuralynx (the commons folder
 addpath(genpath('X:\Luca\TREBER\Scripts'))
 addpath('Z:\Common\fieldtrip-20170618');
 addpath('X:\Common\fieldtrip-20200310');
-dbstop if error
 ft_defaults;
+dbstop if error
 
 fin = cellfun(@(x)regexp(x, '\.', 'split'), res, 'UniformOutput', false)
 

@@ -105,19 +105,22 @@ idxSpks = allSU{su,3}/32;
 % 
 
 % downsample first to 100hz
-datadown.trial = {data.lfp_raw};
-datadown.time = data_micro.time;
+datadown.trial = {data.lfp_noArt};
+datadown.time = {1:size(data.lfp_noArt,2)};
 datadown.label = {'Chan1'; 'Chan2'; 'Chan3'; 'Chan4'; 'Chan5'; 'Chan6'; 'Chan7'; 'Chan8'};
 cfg = [];
-cfg.resamplefs = 300; % resample at 100hz
+cfg.resamplefs = 100; % resample at 100hz
 cfg.detrend = 'no';
 cfg.trials = 'all';
 
-datadown = ft_resampledata(cfg, datadown);
 
-idxSpks = allSU{su,3}/32000*300;
-inptDat.lfp_noArt = datadown.trial{1};
-gedSFC_segm    (inptDat, idxSpks, bidsID, sesh, su);
+datadown2 = ft_resampledata(cfg, datadown);
+datadown2 = ft_resampledata(cfg, data_micro);
+
+data_micro = rmfield(data_micro, 'cfg');
+data_micro.label = data_micro.label(1:8);
+data_micro.trial{1} = data_micro.trial{1}(1:8,:);
+datadown2 = ft_resampledata(cfg, data_micro);
 
 % % Do SFC for the trial segmeneted data
 % gedSFC_trlsegm (downdata, idxSpks, bidsID, sesh, su);

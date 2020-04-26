@@ -13,7 +13,7 @@ ModeArray = [];
 EVfile = dir([p2d,'*nev']);
 
 % [TimeStampsTTL, ttls, HdrTTL] = Nlx2MatEV(EVfile.name, FieldSelection, ExtractHeader, ExtractMode, ModeArray );
-cd('X:\Luca\functions\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
+cd('X:\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
 [TimeStampsTTL, ttls, HdrTTL] = Nlx2MatEV([EVfile.folder, filesep, EVfile.name], FieldSelection, ExtractHeader, ExtractMode, ModeArray );
 cd(p2d)
 
