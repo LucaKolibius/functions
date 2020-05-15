@@ -10,9 +10,16 @@ addpath('Z:\Common\fieldtrip-20170618');
 addpath('X:\Common\fieldtrip-20200310');
 ft_defaults;
 dbstop if error
+dbclear if error
 
 fin = cellfun(@(x)regexp(x, '\.', 'split'), res, 'UniformOutput', false)
 
+
+
+%%
+% compare micro LFP of precue period (-1:0) for indexed and non-indexed
+% trials
+LFPanal
 %% detect and cluster spikes (manually and automatically) using fndIndx3.m
 
 %  Here I use cross-correlation to get rid of some artefacts
@@ -81,10 +88,6 @@ anal_sub_1013
 % for ic = [4 6:13] % takes overlap into account
 fndLFP(ic)
 % end
-
-% compare micro LFP of precue period (-1:0) for indexed and non-indexed
-% trials
-LFPanal
 
 % converts the timestamps from the fVSp structure into the allSU strucutre
 % considering electrode location (elecLoc) & if its a good unit (clNames)
