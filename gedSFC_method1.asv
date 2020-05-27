@@ -21,6 +21,7 @@ sniplen = ((sets.nwin*2)+1) + 2*pddng; % snippet length
 for trl = 1:trls
     
     %     broadband covariance
+    %     trlLFP = data.lfp_noArt(:,npnts*(trl-1)+1:npnts*trl); % old
     trlLFP = data.lfp_noArt(:,tw1(trl) : tw2(trl));
     
     %% highpass filter data (doing the filtering on the snippits is suboptimal)
@@ -38,14 +39,14 @@ for trl = 1:trls
     if any(isnan(trlLFPd(:))) % skip if there are artefacts in this trial
         continue
     end
-    
+
     if isempty(spikelocs) % no spikes within limits of this trial
         continue
     end
     
     effTrls = effTrls + 1; % effective number of trials (trials without an artifact
     numspks = numspks + length(spikelocs); % number of spikes used for SFC
-    
+
     % save spikelocs and LFP for later permutation
     allTrlLFP {effTrls} = trlLFP;
     allTrlSPK {effTrls} = spikelocs;
@@ -63,14 +64,14 @@ for trl = 1:trls
     % I'll go here for the approach to extract the LFP surrounding each spike. There might be an overlap between those time windows (for bursts) and selecting a window in which there are multiple bursts might be a valid alternative. But as I am interested in single spikes here and not bursts, I will consider the LFP surrounding each spike
     for spk = 1:length(spikelocs)
         spkLFP = [spkLFP; {trlLFP(:,spikelocs(spk)-sets.nwin:spikelocs(spk)+sets.nwin)}];
-    end
-    
+    end            
+        
     %     spike-locked covariance
     covSTrl = zeros(chans);
     for ti=1:length(spikelocs)
         tempdat = trlLFP(:,spikelocs(ti)-sets.nwin:spikelocs(ti)+sets.nwin); % take the EEG activity from all channels at timestamps surrounding the first spike
         tempdat = bsxfun(@minus,tempdat,mean(tempdat,2)); % demean data snippet
-        covSTrl = covSTrl + (tempdat*tempdat')/((sets.nwin*2)+1); % calculate covariance of trough locked snippet and add it to existing covariance matrix
+        covSTrl   = covSTrl + (tempdat*tempdat')/((sets.nwin*2)+1); % calculate covariance of trough locked snippet and add it to existing covariance matrix
     end
     covS = covS + covSTrl; % average by number of added troughs
     
@@ -105,9 +106,9 @@ for cmp = chans : - 1 : 1
         covS    = zeros(chans);
         
         % shuffle the spikes
-        randex        = randperm(size(allTrlSPK,2));
+        randex = randperm(size(allTrlSPK,2));
         allTrlSPKperm = allTrlSPK(randex);
-        spkLFPperm    = [];
+        spkLFPperm = [];
         
         for permtrl = 1:effTrls
             spikelocs = allTrlSPKperm{permtrl};
@@ -120,7 +121,7 @@ for cmp = chans : - 1 : 1
                 spkLFPperm = [spkLFPperm; {tempdat}];
                 
                 tempdat = bsxfun(@minus,tempdat,mean(tempdat,2)); % demean data snippet
-                covSTrl = covSTrl + (tempdat*tempdat')/sets.nwin; % calculate covariance of trough locked snippet and add it to existing covariance matrix
+                covSTrl   = covSTrl + (tempdat*tempdat')/sets.nwin; % calculate covariance of trough locked snippet and add it to existing covariance matrix
             end
             covS = covS + covSTrl; % average by number of added troughs
             
@@ -141,7 +142,7 @@ for cmp = chans : - 1 : 1
         end
         
         trlPowPerm(perm,:) = mean(trlPow,1);
-        disp(sprintf('Permutation #%d | elapsed time: %.1f seconds', perm, toc));
+       disp(sprintf('Permutation #%d | elapsed time: %.1f seconds', perm, toc)); 
     end
     
     %% check if significant
@@ -166,13 +167,9 @@ for cmp = chans : - 1 : 1
     
 end
 
-switch sets.server
-    case 0
-        savepath = ['X:\Luca\engram allocation lfp\SFC\method1\', num2str(filtf), filesep, num2str(sets.nwin), filesep];
-    case 1
-        savepath = ['/media/ldk898/rds-share/Luca/server/engram allocation lfp/', num2str(filtf), '/', num2str(sets.nwin), '/'];
-end
-
+% toc
+savepath = ['X:\Luca\engram allocation lfp\SFC\method1\', num2str(filtf), filesep, num2str(sets.nwin), filesep];
+% savepath = ['/media/ldk898/rds-share/Luca/server/engram allocation lfp/', num2str(filtf), '/', num2str(sets.nwin), '/'];
 save([savepath, 'SFC_', bidsID, '_', sesh, '_su', num2str(su)], 'trlPow', 'trlPowPerm', 'evecs', 'signSFC', 'evec')
 
 
@@ -184,19 +181,19 @@ save([savepath, 'SFC_', bidsID, '_', sesh, '_su', num2str(su)], 'trlPow', 'trlPo
 
 % figure
 % for cmp = 1:chans
-%
+%     
 %     % plot signal
 %     plotSig = nanmean(trlPow,1);
 %     plot(hz, plotSig);
 %     set(gca,'xlim',[0 90],'xtick',10:20:90), axis square
 %     xlabel('Frequency (Hz)'), ylabel('Power (a.u.)')
 %     title(sprintf('Comp #%d | #%d Spikes', cmp, numspks));
-%
+%     
 %     % plot 95% threshold
 %     hold on
 %     plotErr = prctile(trlPowPerm, 95,1);
 %     plot(hz, plotErr);
-
+    
 % end
 
 end % end of function

@@ -1,14 +1,5 @@
-% various settings
-sets         = [];
-sets.server  = 0;    % 0 for local machine, 1 for server
-sets.pddng   = 500;  % padding before and after data snippet for SFC to increase frequency resolution
-sets.maxSpks = 5000; % maximal number of spikes that is considered for SFC
-sets.srate   = 1000; % sampling rate
-sets.nwin    = 50;   % time in samples before and after spikes that is considered for analysis
-sets.chan    = 8;    % number of EEG channels
-sets.nperm   = 1000; % number of permutations
-
-switch sets.server
+server = 0;
+switch server
     case 0 % local machine
         addpath('X:\Luca\toolboxes\gedCFC_tutorial');
         IUdir  = dir('X:\Luca\indexSUvisu\varWindow_ENC_-1-113_RET_-1113_DP_p99_th1\SU_*.mat');
@@ -16,15 +7,24 @@ switch sets.server
         artDir = dir('X:\Luca\engram allocation lfp\lfpArtefacts\lfp_artefacts\LFPartefacts_*.mat');
     case 1 % server
         addpath('/media/ldk898/rds-share/Luca/server/functionen');
-        IUdir  = dir('/media/ldk898/rds-share/Luca/server/varWindow_ENC_-1-113_RET_-1113_DP_p99_th1/SU_*.mat']);
+        IUpath = '/media/ldk898/rds-share/Luca/server/varWindow_ENC_-1-113_RET_-1113_DP_p99_th1';
+        IUdir  = dir([IUpath, '/', 'SU_*.mat']);
         LFPdir = dir('/media/ldk898/rds-share/Luca/server/George/sub-*_micro_RAW_DS-1000_SPK-INT.mat');
         artDir = dir('/media/ldk898/rds-share/Luca/server/lfp_artefacts/LFPartefacts_*.mat');
 end
 
+% various settings
+sets.pddng   = 500;  % padding before and after data snippet for SFC to increase frequency resolution
+sets.maxSpks = 5000; % maximal number of spikes that is considered for SFC
+sets.srate   = 1000; % sampling rate
+sets.nwin    = 50;   % time in samples before and after spikes that is considered for analysis
+sets.chan    = 8;
+sets.nperm   = 1000;
+
 % start with each SU
-for it = 1:size(IUdir,1)
-    clearvars -except IUpath IUdir LFPdir artDir it nonLFP_all indLFP_all sets
-    switch sets.server
+for it = 6%:size(IUdir,1)
+    clearvars -except IUpath IUdir LFPdir artDir it nonLFP_all indLFP_all sets server
+    switch server
         case 0
             load([IUdir(it).folder, filesep, IUdir(it).name]) % load IU info
             load([artDir(1).folder, filesep, 'LFPartefacts_', bidsID, '_', sesh, '_enc_', wireName(1:end-1),'.mat'], 'artefactsEnc'); % load artefact timestamps (1x8 cell with each cell corresponding to a wire)
@@ -50,7 +50,7 @@ for it = 1:size(IUdir,1)
     end
     
     % load encoding trigger
-    switch sets.server
+    switch server
         case 0
             cd(['X:\Luca\data\', mSubject,filesep,  mSession,filesep]);
             abc  = dir('2*'); cd(abc.name);
@@ -66,14 +66,8 @@ for it = 1:size(IUdir,1)
     encTrigger = round(encTrigger*1000); % seconds to samples
     
     % load wirename
-    switch sets.server
-        case 0
-            loadFile = dir(['X:\Luca\data\allSbj\allSU_', bidsID,'_',  mSession '.mat']);
-            load([loadFile.folder, filesep, loadFile.name])
-        case 1
-            loadFile = dir(['/media/ldk898/rds-share/Luca/server/data/allSbj/allSU_', bidsID,'_',  mSession '.mat']);
-            load(['/media/ldk898/rds-share/Luca/server/data/allSbj', '/', loadFile.name])
-    end
+    loadFile = dir(['X:\Luca\data\allSbj\allSU_', bidsID,'_',  mSession '.mat']);
+    load([loadFile.folder, filesep, loadFile.name])
     
     idxWire   = allSU{su,1};
     idxBundle = idxWire(1:end-1);
@@ -81,13 +75,7 @@ for it = 1:size(IUdir,1)
     
     loadLFP = cellfun(@(x)regexp(x,[bidsID, '_', mSession]), {LFPdir.name}, 'UniformOutput', false); % find the LFP date for the correct patient and session ...
     loadLFP = find(~cellfun(@isempty, loadLFP));
-    
-    switch sets.server
-        case 0
-            load([LFPdir(loadLFP).folder, filesep, LFPdir(loadLFP).name]) % ... and load it in
-        case 1
-            load(['/media/ldk898/rds-share/Luca/server/George', '/', LFPdir(loadLFP).name]) % ... and load it in
-    end
+    load([LFPdir(loadLFP).folder, filesep, LFPdir(loadLFP).name]) % ... and load it in
     
     idx = cellfun(@(x)regexp(x,idxBundle), data_micro.label, 'UniformOutput', false); % find the position of the MW of my bundle of interest
     idx = cellfun(@(x)find(x==1), idx, 'UniformOutput', false);
@@ -131,16 +119,12 @@ for it = 1:size(IUdir,1)
     end
     
     filtf   = 0; % highpass filter at 10hz; set to 0 for no filtering
+    sniplen = ((sets.nwin*2)+1) + 2*sets.pddng;
     [evec, signSFC] = gedSFC_method1(data, idxSpks, filtf, bidsID, sesh, su, sets);
     
     if signSFC == 0
         filtf   = 10; % highpass filter at 10hz; set to 0 for no filtering
-        [evecf, signSFC] = gedSFC_method1(data, idxSpks, filtf, bidsID, sesh, su, sets); % redo SFC
-    end
-    
-    % update evec if the filtered approach yielded significant SFC
-    if signSFC == 1
-        evec = evecf;
+        [evec, signSFC] = gedSFC_method1(data, idxSpks, filtf, bidsID, sesh, su, sets); % redo SFC
     end
     
     %% OLD SFC
@@ -200,14 +184,8 @@ for it = 1:size(IUdir,1)
     permLFP{it} = [nonLFP; indLFP];
     numIdx(it) = sum(data.idxTrl);
     
-    switch sets.server
-        case 0
-            savepath = ['X:\Luca\engram allocation lfp\SFC\method1\', num2str(filtf), filesep, num2str(sets.nwin), filesep];
-        case 1
-            %             savepath = ['/castles/nr/projects/h/hanslmas-ieeg-compute/Luca/fileshare/engram allocation lfp/', num2str(filtf), '/', num2str(sets.nwin), '/'];
-            savepath = ['/media/ldk898/rds-share/Luca/server/engram allocation lfp/', num2str(filtf), '/', num2str(nwin), '/'];
-    end
-    
+    savepath = ['X:\Luca\engram allocation lfp\SFC\method1\', num2str(filtf), filesep, num2str(sets.nwin), filesep];
+    % savepath = ['/castles/nr/projects/h/hanslmas-ieeg-compute/Luca/fileshare/engram allocation lfp/', num2str(filtf), '/', num2str(sets.nwin), '/'];
     save([savepath,  'LFP_', bidsID, '_', sesh, '_su', num2str(su)], 'numIdx', 'permLFP', 'powDiff')
     
 end
