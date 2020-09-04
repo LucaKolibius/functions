@@ -1,8 +1,6 @@
-function [tableTemplate, hitsIdx, missIdx, allTrials, sessionNum, retTrigger, encTrigger, orda, animalCues] = loadLogs(p2d, trls)
-% error('ERLANGEN TRIGGER ARE SAMPLED AT ~32678 Hz');
-% load in TTLs
-cd(p2d)
-%trigger
+function [img, trigger] = loadLogs_tuningBT(p2d)
+
+%% TRIGGER
 FieldSelection(1) = 1; %timestamps
 FieldSelection(2) = 0; % EventIDs
 FieldSelection(3) = 1; %TTLs
@@ -13,14 +11,11 @@ ExtractMode = 1;
 ModeArray = [];
 EVfile = dir([p2d,'*nev']);
 
-% [TimeStampsTTL, ttls, HdrTTL] = Nlx2MatEV(EVfile.name, FieldSelection, ExtractHeader, ExtractMode, ModeArray );
 cd('X:\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
-[TimeStampsTTL, ttls, HdrTTL] = Nlx2MatEV([EVfile.folder, filesep, EVfile.name], FieldSelection, ExtractHeader, ExtractMode, ModeArray );
-% [timestampsCSC, dataSamplesCSC,hdrCSC] = Nlx2MatCSC([p2d,CSCfiles(it).name], FieldSelection, ExtractHeader, ExtractMode, []);% import the raw data
+[TimeStampsTTL, ttls, ~] = Nlx2MatEV([EVfile.folder, filesep, EVfile.name], FieldSelection, ExtractHeader, ExtractMode, ModeArray );
 
 cd(p2d)
 
-events = zeros(size(ttls,2),2);
 events(:,1) = TimeStampsTTL';
 events(:,2) = ttls';
 TimeStampsTTL = TimeStampsTTL-TimeStampsTTL(1,1);
@@ -73,18 +68,16 @@ trialStart = events(a,1); % on which index in the variable "events" do we have t
 % dir('*fVSp*txt'); % shows all logfiles in current directory
 % logFilename = input('What is the name of the Log-File? ', 's');
 
-mDir = dir('*fVSp*txt');
+mDir = dir('*ctune*txt');
 logFilename = mDir.name;
 
 patientCode = logFilename(1:6); %for ERL suffix
-patientCode(regexp(patientCode,'_fV'):regexp(patientCode,'_fV')+2) = []; % delete part if there was no ERL suffix
-startSessionNum = regexp(logFilename,'fVSp_')+5;
-endSessionNum = regexp(logFilename,'_');
-endSessionNum = endSessionNum(4)-1;
-sessionNum = logFilename(startSessionNum:endSessionNum); % not all logfiles have the same grammar, so this should prevent problems
-allLogfiles = dir('*fVSp*txt');
+patientCode(regexp(patientCode,'_TS'):regexp(patientCode,'_TS')+2) = []; % delete part if there was no ERL suffix
+sessionStart = regexp(logFilename,'TS'); sessionStart = sessionStart(1);
+sessionNum = logFilename(sessionStart +2 : sessionStart +3); % not all logfiles have the same grammar, so this should prevent problems
+allLogfiles = dir('*ctune*txt');
 numLogfiles = size(allLogfiles, 1);
-disp([patientCode, sessionNum]);
+disp([patientCode, '_', sessionNum]);
 
 if numLogfiles ~= 1
     error('not sure if the xcorr works for a spurious ttl or logfile entry withou ttl')
@@ -125,17 +118,17 @@ end
 % Sometimes incomplete log files have usable trials. This new section
 % should harvest that data
 
-loglist = cellfun(@str2double, raw_temp(:,1)); % new
-% % finds out which trials are presented during encoding AND retrieval, saves this
-% % information as a binary code into log_trialSave
-log_trialSave = zeros(size(loglist,1),1);
-for i=1:size(loglist,1) % numLog/2 = trials according to logfile
-    if size(find(loglist == loglist(i)),1) == 2 % if the trial # appears two times in the logfile
-        log_trialSave(i) = 1;
-    elseif isnan(loglist(i))
-        log_trialSave(i) = 1;
-    end
-end
+% loglist = cellfun(@str2double, raw_temp(:,1)); % new
+% % % finds out which trials are presented during encoding AND retrieval, saves this
+% % % information as a binary code into log_trialSave
+% log_trialSave = zeros(size(loglist,1),1);
+% for i=1:size(loglist,1) % numLog/2 = trials according to logfile
+%     if size(find(loglist == loglist(i)),1) == 2 % if the trial # appears two times in the logfile
+%         log_trialSave(i) = 1;
+%     elseif isnan(loglist(i))
+%         log_trialSave(i) = 1;
+%     end
+% end
 
 % if ~isempty(regexp(p2d,'P09ERL','ONCE')) || ( ~isempty(regexp(p2d,'P07ERL','ONCE')) && ~isempty(regexp(p2d,'S1','ONCE')) ) % for P09ERL and P07ERL_S1
 %     datalist=loglist;
@@ -174,9 +167,9 @@ end
     
 % delete the entries in the logfiles that cannot be saved according to
 % log_trialSave:
-disp(sprintf('Deleting %d logfiles', size(raw_temp(log_trialSave==0,:),1) ));
+% disp(sprintf('Deleting %d logfiles', size(raw_temp(log_trialSave==0,:),1) ));
 % disp(sprintf('Deleting %d logfiles and %d TTL trigger', size(raw_temp(log_trialSave==0,:),1), size(trialStart(data_trialSave==0),1) ));
-raw_temp(log_trialSave==0,:)=[];
+% raw_temp(log_trialSave==0,:)=[];
 % trialStart(data_trialSave==0)=[];
 %%%
 
@@ -218,63 +211,16 @@ end
 %     end
 % end
 
-%% Separate encoding and retrieval
-% delLog=str2double(raw(:,1)); % old; doesn't work anymore for whatever reason
-delLog = cellfun(@str2double, raw(:,1)); % new
-
-
-while ~isnan(delLog(end-1)) % some logfiles (P09S03) do not have NaN values at the end. this is added here because this script relies on them
-    delLog(end+1)=NaN;
-end
-
-flag=0; % flag 0/1 -> encoding/retrieval
-blockcounter=1;
-idxEnc=[];
-idxRet=[];
-for ix=1:size(delLog,1)
-    if ix==1
-        encBlock_start=1;
-    elseif isnan(delLog(ix)) && isnan(delLog(ix-1))
-        encBlock_start=ix+1;
-    elseif isnan(delLog(ix)) && isnumeric(delLog(ix+1)) && flag==0 % encoding blocks
-        idxEnc=[idxEnc; [encBlock_start:ix-1]'];
-        flag=1;
-        retBlock_start=ix+1;
-    elseif isnan(delLog(ix)) && flag==1 % retrieval blocks
-        idxRet=[idxRet; [retBlock_start:ix-1]'];
-        flag=0;
-        blockcounter=blockcounter+1;
-    end
-end
-
-rawEnc={};
-rawRet={};
-for ix=1:size(raw,1)
-    if find(idxEnc==ix)
-        rawEnc=[rawEnc; raw(ix,:)];
-    elseif find(idxRet==ix)
-        rawRet=[rawRet; raw(ix,:)];
-    end
-end
 
 %% determine trialStartLog
-trialStartEnc = cellfun(@str2double, [rawEnc(:,5)]);
-trialStartRet = cellfun(@str2double, [rawRet(:,10)]);
-trialStartLog = sort([trialStartEnc; trialStartRet]);
+trialStartLog = cellfun(@str2double, [raw(:,5)]);
 
 %% determine ttl and logfile match
 preSizeTTL = length(trialStart);
 preSizeLog = length(trialStartLog);
+
 if ~isequal(length(trialStartLog), length(trialStart))
-    %% visu - pre
-%     figure
-%     subplot(211)
-%     dt = linspace(trialStartLog(1), trialStartLog(end), 10000);
-%     histogram(trialStartLog,dt);
-%     subplot(212)
-%     dt = linspace(trialStart(1), trialStart(end), 10000);
-%     histogram(trialStart,dt);
-    
+
     
     %%
     [trgIdx, stopIt] = trigger_convolution(trialStartLog, trialStart);
@@ -296,18 +242,16 @@ if ~isequal(length(trialStartLog), length(trialStart))
             trialStartLog(delStarts) = [];
             trialStart(delStarts) = [];
         end
-%     if stopIt == 1
-%         error('More Logfiles than triggers! Investigate')
-%     end
+
     end
-     %% visu - post
-%     figure
-%     subplot(211)
-%     dt = linspace(trialStartLog(1), trialStartLog(end), 10000);
-%     histogram(trialStartLog,dt);
-%     subplot(212)
-%     dt = linspace(trialStart(1), trialStart(end), 10000);
-%     histogram(trialStart,dt);
+     % visu - post
+    figure('units','normalized','outerposition',[0 0 1 1]);
+    subplot(211)
+    dt = linspace(trialStartLog(1), trialStartLog(end), 10000);
+    histogram(trialStartLog,dt);
+    subplot(212)
+    dt = linspace(trialStart(1), trialStart(end), 10000);
+    histogram(trialStart,dt);
 end
 
 postSizeTTL = length(trialStart);
@@ -326,129 +270,33 @@ for ix=1:size(raw,1)
 end
 
 %% stimulus place or face?
-temp1=cellstr(rawEnc(:,3));
-stim1={};
-for ix=1:size(temp1,1)
-    stim1{ix}=temp1{ix,1}(1);
-end
-stim1=stim1';
+img = [raw{:,3}];
 
-temp2=cellstr(rawEnc(:,4));
-stim2={};
-for ix=1:size(temp2,1)
-    stim2{ix}=temp2{ix,1}(1);
-end
-stim2=stim2';
-faceORplace=[stim1 stim2];
+% temp1=cellstr(rawEnc(:,3));
+% stim1={};
+% for ix=1:size(temp1,1)
+%     stim1{ix}=temp1{ix,1}(1);
+% end
+% stim1=stim1';
+% 
+% temp2=cellstr(rawEnc(:,4));
+% stim2={};
+% for ix=1:size(temp2,1)
+%     stim2{ix}=temp2{ix,1}(1);
+% end
+% stim2=stim2';
+% faceORplace=[stim1 stim2];
 
-%% separate encoding and retrieval again, now with the trialStart added
-% delLog=str2double(raw(:,1)); % old; doesn't work anymore for whatever reason
-delLog = cellfun(@str2double, raw(:,1)); % new
-
-while ~isnan(delLog(end-1)) % some logfiles (P09S03) do not have NaN values at the end. this is added here because this script relies on them
-    delLog(end+1)=NaN;
-end
-
-flag=0; % flag 0/1 -> encoding/retrieval
-blockcounter=1;
-idxEnc=[];
-idxRet=[];
-for ix=1:size(delLog,1)
-    if ix==1
-        encBlock_start=1;
-    elseif isnan(delLog(ix)) && isnan(delLog(ix-1))
-        encBlock_start=ix+1;
-    elseif isnan(delLog(ix)) && isnumeric(delLog(ix+1)) && flag==0 % encoding blocks
-        idxEnc=[idxEnc; [encBlock_start:ix-1]'];
-        flag=1;
-        retBlock_start=ix+1;
-    elseif isnan(delLog(ix)) && flag==1 % retrieval blocks
-        idxRet=[idxRet; [retBlock_start:ix-1]'];
-        flag=0;
-        blockcounter=blockcounter+1;
-    end
-end
-
-rawEnc={};
-rawRet={};
-for ix=1:size(raw,1)
-    if find(idxEnc==ix)
-        rawEnc=[rawEnc; raw(ix,:)];
-    elseif find(idxRet==ix)
-        rawRet=[rawRet; raw(ix,:)];
-    end
-end
 
 %% Trigger for encoding and retrieval (1: cue; 2: stimulus; 3: response)
-encTrigger = cellfun(@str2double, rawEnc(:,5:7)); % new
+trigger = cellfun(@str2double, raw(:,5)); % new
 
-for ix=1:size(rawEnc,1)
-    subst=encTrigger(ix,1)-cell2mat(rawEnc(ix,13));
-    encTrigger(ix,1)=encTrigger(ix,1)-subst;
-    encTrigger(ix,2)=encTrigger(ix,2)-subst;
-    encTrigger(ix,3)=encTrigger(ix,3)-subst;
+for ix=1:size(raw,1)
+    subst=trigger(ix,1)-cell2mat(raw(ix,13));
+    trigger(ix,1)=trigger(ix,1)-subst;
+%     trigger(ix,2)=trigger(ix,2)-subst;
+%     trigger(ix,3)=trigger(ix,3)-subst;
 end
 
-retTrigger = cellfun(@str2double, rawRet(:,10:12)); % new
-for ix=1:size(rawEnc,1)
-    subst=retTrigger(ix,1)-cell2mat(rawRet(ix,13));
-    retTrigger(ix,1)=retTrigger(ix,1)-subst;
-    retTrigger(ix,2)=retTrigger(ix,2)-subst;
-    retTrigger(ix,3)=retTrigger(ix,3)-subst;
-end
-allTrials=size(encTrigger,1);
-
-% enc1 und ret1 should be the same stimuli
-retTrigger=[retTrigger cellfun(@str2double, rawRet(:,1))];
-retTrigger=sortrows(retTrigger,4);
-retTrigger = retTrigger(1:end,1:3); % delete the sorting column
-
-% hits or misses
-% find out trials with two hits
-respCorr = cellfun(@str2double, rawRet(:,[1 5 6]));
-respCorr = sortrows(respCorr,1);
-
-hitsIdx=[];
-for ia=1:size(respCorr,1)
-    if respCorr(ia,2) == 1 && respCorr(ia,3) == 1
-        hitsIdx(size(hitsIdx,1)+1,1)=ia;
-        faceORplace{ia,3}='hit';
-    end
-end
-
-missIdx=[];
-for ia=1:size(respCorr,1)
-    if respCorr(ia,2) ~=1 || respCorr(ia,3) ~=1
-        missIdx(size(missIdx,1)+1,1)=ia;
-        faceORplace{ia,3}='miss';
-    end
-end
-
-%% making the table
-tempCell=[];
-trials=[];
-for i=1:allTrials
-    trials{1,i}=sprintf('trial%d',i);
-    value=[faceORplace(i,1),faceORplace(i,2)];
-    value=strjoin(value,''); % combine the two characters, use no delimiter
-    tempCell{1,i}=value;
-    tempCell{2,i}=faceORplace(i,3);
-end
-tableTemplate = cell2table(tempCell);
-tableTemplate.Properties.VariableNames = trials(1,:);
-
-% this is an index to reorder retrieval according to its presentation order
-orda = cellfun(@str2double, rawRet(:,1));
-
-idx = ~cellfun(@isempty, strfind(tableTemplate{2,:}, 'miss'));
-orda(idx,:) = [];
-
-orda(:,2) = [1:size(orda,1)]';
-orda = sortrows(orda,1);
-orda = orda(:,2);
-
-%% animal cue
-% trls is refering to hits only
-animalCues = [rawEnc{hitsIdx(trls),2}];
 end
 

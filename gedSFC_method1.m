@@ -45,7 +45,7 @@ for trl = 1:trls
     
     effTrls = effTrls + 1; % effective number of trials (trials without an artifact
     numspks = numspks + length(spikelocs); % number of spikes used for SFC
-    
+    disp(numspks)
     % save spikelocs and LFP for later permutation
     allTrlLFP {effTrls} = trlLFP;
     allTrlSPK {effTrls} = spikelocs;
@@ -94,12 +94,12 @@ end
 % permutation test
 trlPowPerm = zeros(nperm, sniplen); % preallocation
 hz         = linspace(0, srate, sniplen);
-signSFC = 0;
+signSFC    = 0;
+
 for cmp = chans : - 1 : 1
     if signSFC == 1
         continue
     end
-    
     tic
     parfor perm = 1:nperm
         covS    = zeros(chans);
@@ -132,25 +132,27 @@ for cmp = chans : - 1 : 1
         [evecsP,evals] = eig(covS,bbcov);
         [~,compidx]    = sort(diag(evals)); % max component
         
-        trlPow = zeros(numspks, sniplen);
+        spkPowPerm = zeros(numspks, sniplen);
         for spk = 1 : size(spkLFPperm,1)
             spkLFPpermlin  = spkLFPperm{spk};
             spkLFPpermlin  = spkLFPpermlin' * evecsP(:,compidx(cmp));
-            spkLFPpermlin  = [zeros(500,1); spkLFPpermlin; zeros(500,1)]; % padding
-            trlPow(spk,:)  = abs(fft(spkLFPpermlin)/sniplen);
+            spkLFPpermlin  = [zeros(pddng,1); spkLFPpermlin; zeros(pddng,1)]; % padding
+            spkPowPerm(spk,:)  = abs(fft(spkLFPpermlin)/sniplen);
         end
         
-        trlPowPerm(perm,:) = mean(trlPow,1);
-        disp(sprintf('Permutation #%d | elapsed time: %.1f seconds', perm, toc));
+        trlPowPerm(perm,:) = mean(spkPowPerm,1);
+%         disp(sprintf('Permutation #%d | elapsed time: %.1f seconds', perm, toc));
     end
-    
+    toc
     %% check if significant
     idx      = hz<=10;
     lowFperm = prctile(nanmean(trlPowPerm(:,idx),2),95, 1);
     lowF     = nanmean( nanmean(trlPow(:,idx),2) );
+    
     idx      = and(hz>10, hz<=30);
     midFperm = prctile(nanmean(trlPowPerm(:,idx),2),95, 1);
     midF     = nanmean( nanmean(trlPow(:,idx),2) );
+    
     idx      = and(hz>30, hz<=60);
     higFperm = prctile(nanmean(trlPowPerm(:,idx),2),95, 1);
     highF    = nanmean( nanmean(trlPow(:,idx),2) );
@@ -158,11 +160,12 @@ for cmp = chans : - 1 : 1
     if or(or(lowF >= lowFperm, midF >= midFperm), highF >= higFperm)
         signSFC = 1;
         evec    = evecs(:, compidx(cmp));
+        comp = compidx(cmp);
     else
         signSFC = 0; % stays zero
         evec    = evecs(:, compidx(chans)); % take the biggest eigenvector
-    end
-    
+        comp = compidx(chans);
+    end    
     
 end
 
@@ -173,7 +176,7 @@ switch sets.server
         savepath = ['/media/ldk898/rds-share/Luca/server/engram allocation lfp/', num2str(filtf), '/', num2str(sets.nwin), '/'];
 end
 
-save([savepath, 'SFC_', bidsID, '_', sesh, '_su', num2str(su)], 'trlPow', 'trlPowPerm', 'evecs', 'signSFC', 'evec')
+save([savepath, 'SFC_', bidsID, '_', sesh, '_su', num2str(su)], 'trlPow', 'trlPowPerm', 'evecs', 'signSFC', 'evec', 'comp', '-v7.3')
 
 
 %% Visualisation

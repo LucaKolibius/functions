@@ -2,6 +2,7 @@
 % have spksEnc and spksRet already inverted there
 % SU 21 in the first index neuron session (indexNeuron = 1) is super tonic!
 function visuSU(datapath)
+addpath(genpath('X:\Luca\toolboxes\TREBER'));
 % datapath = 'X:\Luca\meetings\indexVisu\encRet_p95_th1';
 cd(datapath)
 allSU = dir('SU_*');
@@ -101,8 +102,9 @@ for indexNeuron = 1:size(allSU,1)
     subplot(6,8,[7:8, 15:16, 23:24, 31:32])
     hold on
     %                     plotting
-    plot(origENC, 'linew',3, 'Color', mBlue, 'marker', 'o');
-    plot(origRET, 'linew',3, 'Color', mOrange, 'marker', 'o');
+%     plot(origENC, 'linew',3, 'Color', mBlue, 'marker', 'o');
+%     plot(origRET, 'linew',3, 'Color', mOrange, 'marker', 'o');
+plot(origENC.*origRET, 'linew',3, 'Color', [0.47,0.67,0.19], 'marker', 'o');
     
     %                     aesthetics
     xlim([0.5 length(hitsIdx)+0.5])
@@ -260,8 +262,8 @@ for indexNeuron = 1:size(allSU,1)
     axH.XLabel.VerticalAlignment = 'cap';
     
     %% animal cue
-    load('X:\Luca\anCueNames.mat', 'anCueNames');
-    nperm = 100000;
+    load('X:\Luca\data\allSbj\anCueNames.mat', 'anCueNames');
+    nperm = 1;
     
     simil = zeros(1,nperm);
     for ia=1:nperm
@@ -272,7 +274,7 @@ for indexNeuron = 1:size(allSU,1)
     word2vec_th = prctile(simil,word2vec_plvl);
     
     %
-    load('X:\Luca\anCueNames.mat', 'anCueNames');
+%     load('X:\Luca\anCueNames.mat', 'anCueNames');
     numSignTrls = size(animalCues,2);
     if strcmp(animalCues{1}(end-2:end),'bmp')
         %         cd('Z:\Luca\Github\FacePlace-task\EMpairs_v5_2017-09-11\image_data\EMtune\fVSp_resized\empairs_cropped');
@@ -339,7 +341,7 @@ for indexNeuron = 1:size(allSU,1)
     mFigH.set('Position', newPosition, 'units', 'normalized');
     mFigH.WindowState = 'maximized'; % Maximize with respect to current monitor.
     
-    saveas(gcf, ['visuSU_',subjID, '_SU',num2str(su)], 'jpg');
+    saveas(gcf, ['visuSU_',subjID, '_SU',num2str(su)], 'emf');
 %     catch err
 %         fprintf(1,'The identifier was:\n%s',err.identifier);
 %         fprintf(2,'There was an error! The message was:\n%s',err.message);

@@ -55,9 +55,11 @@ for encWindow = 1:22 % 5
             [tableTemplate, hitsIdx, ~, ~, ~, retTrigger, encTrigger, ~, ~] = loadLogs(p2d, 1);
             
             %% for FS / getSampleFreq
-            cdServ = p2d;
-            cdServ = regexprep(cdServ, 'X:\', 'Z:\hanslmas-ieeg-compute\');
-            cd(cdServ);
+            X:\Luca\data\P02\S1\2016-07-10_18-41-47
+            Z:\hanslmas-ieeg-compute\Luca\data
+            newDir = p2d;
+            newDir = regexprep('')
+            newDir()
             
             
             %% resume normal code

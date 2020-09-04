@@ -7,7 +7,7 @@ if( contains(sub_ID, 'P') == 1 || contains(sub_ID, 'ERL') == 1 )
     elseif(contains(sub_ID, 'P') == 1 )
         x1 = '0';
     end
-    if(strcmp(has_micro, 'yes') == 1)
+    if has_micro == 1
         x2 = '0';
     else; x2 = '1';
     end

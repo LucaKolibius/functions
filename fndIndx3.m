@@ -91,3 +91,53 @@ for ia = 1:length(allSesh)
     cd ..\negDetect
     Do_clustering('all', 'parallel', false, 'make_plots', true);
 end
+
+
+%% load lfp
+%% define the FieldSelection variable and set the ExtracMode.
+FieldSelection(1) = 1;%timestamps
+FieldSelection(2) = 0;
+FieldSelection(3) = 0;%sample freq
+FieldSelection(4) = 0;
+FieldSelection(5) = 1;%samples
+ExtractHeader = 1;
+ExtractMode = 1; % 2 = extract record index range; 4 = extract timestamps range.
+
+[p2d] = 'X:/';
+cd('X:\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
+
+[CSCfiles] = dir([p2d,'*.ncs']);
+
+dum = cell(1,length(CSCfiles));
+it = 1;
+
+[timestampsCSC, dataSamplesCSC,hdrCSC] = Nlx2MatCSC([p2d,CSCfiles(it).name], FieldSelection, ExtractHeader, ExtractMode, []);% import the raw data
+
+%extract the scale factor
+chck   = regexp(hdrCSC,'ADBitVolts');
+selIdx = [];
+for jt = 1:length(chck); selIdx(jt) = ~isempty(chck{jt});end;
+selIdx = find(selIdx~=0);
+scalef = str2double(hdrCSC{selIdx}(min(regexp(hdrCSC{selIdx},'\d')):end));
+
+% extract the sampling-frequency
+chck = regexp(hdrCSC,'SamplingFrequency');
+selIdx = [];
+for jt = 1:length(chck); selIdx(jt) = ~isempty(chck{jt});end;
+selIdx = find(selIdx~=0);
+Fs = str2double(hdrCSC{selIdx}(min(regexp(hdrCSC{selIdx},'\d')):end));
+
+%flatten
+dataSamplesCSC=double(dataSamplesCSC(:))';
+dataSamplesCSC = dataSamplesCSC.*scalef.*1e6;
+% create a time vector of theCSCtime
+[CSCTime] = 0:1/Fs:(length( dataSamplesCSC )-1)/Fs; % in units of sec
+dum{it} = [];
+dum{it}.trial{1} = dataSamplesCSC;
+dum{it}.time{1} = CSCTime;
+dum{it}.label = {chanLab};
+dum{it}.cfg.hdr = hdrCSC;
+dum{it}.fsample = Fs;
+
+mTime = size(CSCTime,2); 
+mTime = mTime/32
