@@ -1,10 +1,10 @@
 function findIndexSU_varWind(plvl, fixTH)
-for encWindow = 1:22 % 5
+for encWindow = 5% 1:22
     if any(encWindow == [1 2 3 8 9 14])
         continue
     end
     
-    for retWindow = 1:22 % 7
+    for retWindow = 7% 1:22
         if any(retWindow == [1 2 3 8 9 14])
             continue
         end
@@ -55,9 +55,9 @@ for encWindow = 1:22 % 5
             [tableTemplate, hitsIdx, ~, ~, ~, retTrigger, encTrigger, ~, ~] = loadLogs(p2d, 1);
             
             %% for FS / getSampleFreq
-            cdServ = p2d;
-            cdServ = regexprep(cdServ, 'X:\', 'Z:\hanslmas-ieeg-compute\');
-            cd(cdServ);
+%             cdServ = p2d;
+%             cdServ = regexprep(cdServ, 'X:\', 'Z:\hanslmas-ieeg-compute\');
+%             cd(cdServ);
             
             
             %% resume normal code
@@ -88,8 +88,9 @@ for encWindow = 1:22 % 5
                 
                 FS = getSamplFreq;
                 if FS ~= 32000
-                    encTrigger = encTrigger / FS * 32000;
+                    encTrigger = encTrigger / FS * 32000; % old: /FS * 32000;
                     retTrigger = retTrigger / FS * 32000;
+                    %                     allSU(:,3) = cellfun(@(x) x/FS*32000, allSU(:,3), 'un', 0);
                     allSU(:,3) = cellfun(@(x) x/FS*32000, allSU(:,3), 'un', 0);
                 end
                 
@@ -104,7 +105,7 @@ for encWindow = 1:22 % 5
                 orgSU(suNum).hitsIdx    = hitsIdx;
                 orgSU(suNum).iu         = 0; % neither gray unit nor fp2 (index) unit
                 orgSU(suNum).idxTrl     = 0;
-                orgSU(suNum).spks       = allSU{addSpks,3};
+                orgSU(suNum).spks       = allSU{addSpks,3}/32;
                 orgSU(suNum).initSR     = FS;
                 
                 
@@ -311,8 +312,8 @@ end
 % save('X:\Luca\indexSUvisu\GRAY_UNITS_varWindow_ENC_-1-113_RET_-1113_DP_p99_th1\orgSU.mat', 'orgSU')
 
 % idx     = [orgSU.iu] == 2; % split into IU and SU
-trigALL = orgSU;
+% trigALL = orgSU;
 % trigIU  = orgSU(idx);
 % trigSU  = orgSU(~idx);
-save('X:\Luca\data\allSbj\allTrig.mat', 'trigALL');
+save('X:\Luca\data\allSbj\allSpks.mat', 'orgSU');
 end % end of function
