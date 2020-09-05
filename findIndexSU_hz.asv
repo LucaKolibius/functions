@@ -136,7 +136,7 @@ for perm = 1 : nperm
         if any(minFiring)
             
             % TEST FOR INDEXING
-            if any(minFiring(ffIdx{spk}) >= 1 & any(minFiring(ppIdx{spk}) >= 1)
+            if any(minFiring(ffIdx{spk}) >= 1) & any(minFiring(ppIdx{spk}) >= 1)
                 
                 permIU(perm) = permIU(perm) + 1;
                 
