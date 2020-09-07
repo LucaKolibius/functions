@@ -1,10 +1,18 @@
-function findIndexSU_hz
+function [p] = findIndexSU_hz(plvl, encRetTH, afterCue, afterResp)
 
-load('X:\Luca\data\allSbj\allSpks.mat', 'allSpks')
-nsecs = 0;
+% encRet min @2 and plvl at 95 seemed to have worked nicely
+% maybe dynTH at 1.96 and encRet @1 was sign @6IU
+
+load('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
 nperm = 10000;
 ewpPerm = cell(size(allSpks));
-plvl = 99;
+
+% plvl = 99;
+% dynTHmin = 1.96;
+% encRetTH = 1;
+% % afterCue = 3000; % 3s after cue
+% afterCue = 0; % from cue onwards
+% afterResp = 0;
 
 for spk = 1 : length(allSpks)
     
@@ -40,13 +48,13 @@ for spk = 1 : length(allSpks)
     for trl = 1:length(allSpks(spk).hitsIdx)
         %% ENCODING
         trlLen = (encTrigger(trl,2) - encTrigger(trl,1)) / 1000;
-        spkTrl = spkTms(spkTms>=encTrigger(trl,1) & spkTms<encTrigger(trl,2)+1000*nsecs) - encTrigger(trl,1) + 1;
+        spkTrl = spkTms(spkTms>=encTrigger(trl,1)+afterCue & spkTms<encTrigger(trl,2)+1000*afterResp) - encTrigger(trl,1) + 1;
         spkTrl = sum(spkTrl);
         spkTrlEnc(trl) = spkTrl / trlLen;
         
         %% RETRIEVAL
         trlLen = (retTrigger(trl,2) - retTrigger(trl,1))  / 1000;
-        spkTrl = spkTms(spkTms>=retTrigger(trl,1) & spkTms<retTrigger(trl,2)+1000*nsecs) - retTrigger(trl,1) + 1;
+        spkTrl = spkTms(spkTms>=retTrigger(trl,1)+afterCue & spkTms<retTrigger(trl,2)+1000*afterResp) - retTrigger(trl,1) + 1;
         spkTrl = sum(spkTrl);
         spkTrlRet(trl) = spkTrl / trlLen;
     end
@@ -72,23 +80,23 @@ for spk = 1 : length(allSpks)
     
     dynTH(spk) = prctile(ewpPerm{spk}(:), plvl);
     
-    %% fixTH 
-    if dynTH(spk) < 1
-        dynTH(spk) = 1;
+    %% fixTH
+    if dynTH(spk) < dynTHmin
+        dynTH(spk) = dynTHmin;
     end
     
     %% THE TRIAL IS EITHER A FF TRIAL OR A PP TRIAL
-    ffppTRL = or(ffIdx{spk}, ppIdx{spk});
+    %  ffppTRL = or(ffIdx{spk}, ppIdx{spk});
     
     %% enc+ret minimum
-    encRetMin = and(spkTrlEnc >= 1, spkTrlRet >= 1);
+    encRetMin = and(spkTrlEnc >= encRetTH, spkTrlRet >= encRetTH);
     
     %% ewp test
     ewpMin = ewp >= dynTH(spk);
     
     %% high enough firing during encoding, retrieval and ewp
     minFiring = and(encRetMin, ewpMin);
-    
+%     minFiring = ewpMin;
     
     if any(minFiring)
         
@@ -96,7 +104,6 @@ for spk = 1 : length(allSpks)
         if any(minFiring(ffIdx{spk}) >= 1) & any(minFiring(ppIdx{spk}) >= 1)
             
             allSpks(spk).iu = 2;
-            %             allSpks(spk).idxTrl = and(minFiring, ffppTRL); % old (but this would make consider less indexedtrials for later ripple comparison if the single unit is an index unit (vs. putative index unit)
             allSpks(spk).idxTrl = minFiring;
             
         % TEST FOR PUTATIVE INDEXING
@@ -125,18 +132,19 @@ for perm = 1 : nperm
         % ENC RET MINIMUM
         curEncPerm = encPerm{spk}(:,thisPerm);
         curRetPerm = retPerm{spk}(:,thisPerm);
-        encRetMin = and(curEncPerm >= 1, curRetPerm >= 1);
+        encRetMin = and(curEncPerm >= encRetTH, curRetPerm >= encRetTH);
         
         % EWP MINIMUM
         ewpMin = curPerm >= dynTH(spk);
         
         % high enough ewq AND high enough firing in encoding and retrieval
-        minFiring = and(encRetMin, ewpMin);
+                minFiring = and(encRetMin, ewpMin);
+%         minFiring = ewpMin;
         
         if any(minFiring)
             
             % TEST FOR INDEXING
-            if any(minFiring(ffIdx{spk}) >= 1 & any(minFiring(ppIdx{spk}) >= 1)
+            if any(minFiring(ffIdx{spk}) >= 1) & any(minFiring(ppIdx{spk}) >= 1)
                 
                 permIU(perm) = permIU(perm) + 1;
                 
@@ -152,13 +160,16 @@ for perm = 1 : nperm
 end % END OF PERMUTATION
 
 resIU.num = sum([allSpks.iu] == 2);
-resIU.higherIter = sum(resIU.num > permIU);
+resIU.higherIter = sum(resIU.num >= permIU);
 resIU.p = 1 - sum(resIU.num >= permIU) / nperm;
 
 resGU.num = sum([allSpks.iu] == 1);
-resGU.higherIter = sum(resGU.num > permGU);
+resGU.higherIter = sum(resGU.num >= permGU);
 resGU.p = 1 - sum(resGU.num >= permGU) / nperm;
 
 save('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks', 'resIU', 'resGU');
 cd('X:\Luca\data\allSbj\')
+disp(resIU.p);
+
+p = resIU.p;
 end % END OF FUNCTION
