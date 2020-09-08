@@ -58,7 +58,5 @@ for spk = 1 : length(allSpks)
     counter = counter + 1;
 end
 
-sbj = unique([supps(:,1)]);
+sbj = supps(:,1}
 
-mean([supps{:,6}]./ [supps{:,5}])
-std([supps{:,6}]./ [supps{:,5}])
