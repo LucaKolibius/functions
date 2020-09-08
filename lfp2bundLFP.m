@@ -1,7 +1,7 @@
 clear
-lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat.mat');  % CHANGED TO NO SPK INT
+lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
 artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
-load('X:\Luca\data\allSbj\allTrig.mat', 'trigALL')
+load('X:\Luca\data\allSbj\allSpksHZ.mat', 'trigALL')
 counter = 1;
 for ses = 1 : size(lfpDir,1)
     disp(ses)
@@ -16,7 +16,7 @@ for ses = 1 : size(lfpDir,1)
     load([lfpDir(ses).folder, filesep, lfpDir(ses).name], 'data');
     
     %% DETECT RIPPLES
-    [~, rpplsWire, bndLab] = calcRppl (data, bidsID, sesh, artFold);
+    [~, rpplsWire, bndLab] = calcRppl (data, bidsID, sesh, artFold, 1);
     
     %% MAKE INTO A NEAT STRUCTURE
     for bund = 1 : size(rpplsWire,1)
@@ -30,15 +30,16 @@ for ses = 1 : size(lfpDir,1)
         idx = strcmp(elecLoc(:,1), bundname);
         
         % WHICH TRIALS IN THAT BUNDLE ARE INDEXED (trlIdxBund)
-        allBund  = {trigALL.wirename};
-        allBund  = cellfun(@(x) x(1:end-1), allBund, 'un', 0);
-        sameBund = and(and(contains({trigALL.bidsID}, bidsID), strcmp({trigALL.sesh}, sesh) ), contains(allBund, bndLab(bund))); % same subject + session + bundle
-        idxTrl   = any(vertcat(trigALL(sameBund).idxTrl),1); % these are the trials that are indexed in that wire
+        %         allBund  = {trigALL.wirename};
+        %         allBund  = cellfun(@(x) x(1:end-1), allBund, 'un', 0);
+        allBund = {allSpks.bundlename};
+        sameBund = and(and(contains({allSpks.bidsID}, bidsID), strcmp({allSpks.sesh}, sesh) ), contains(allBund, bndLab(bund))); % same subject + session + bundle
+        idxTrl   = any(vertcat(allSpks(sameBund).idxTrl),1); % these are the trials that are indexed in that wire
         
         % GET ENCODING TRIGGER FROM PREVIOUS VARIABLE
         % incomplete for bundles w/o single units
-        idxBids = cell2mat(cellfun(@(x) strcmp(x, bidsID), {trigALL.bidsID}, 'un', 0));
-        idxSesh = cell2mat(cellfun(@(x) strcmp(x, sesh), {trigALL.sesh}, 'un', 0));
+        idxBids = cell2mat(cellfun(@(x) strcmp(x, bidsID), {allSpks.bidsID}, 'un', 0));
+        idxSesh = cell2mat(cellfun(@(x) strcmp(x, sesh), {allSpks.sesh}, 'un', 0));
         idxBoth = and(idxBids, idxSesh);
         idxBoth = find(idxBoth == 1);
         
@@ -57,7 +58,7 @@ for ses = 1 : size(lfpDir,1)
         end
         
         % if the variable does not have a idxTrlBund it means there were no SU on the bundle. if there is no encTrigger it means there were no SU in the session (IIRC)
-        rpplBund(counter).encTrigger = trigALL(idxBoth).encTrigger(trigALL(idxBoth).hitsIdx,:);
+        rpplBund(counter).encTrigger = allSpks(idxBoth).encTrigger(allSpks(idxBoth).hitsIdx,:);
         counter  = counter + 1;
         
     end

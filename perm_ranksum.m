@@ -1,3 +1,4 @@
+% behaves weirdly
 function p = perm_ranksum(vec1, vec2)
 nperm   = 10000;
 numVec1 = size(vec1,1);
