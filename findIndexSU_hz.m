@@ -1,4 +1,4 @@
-function [p] = findIndexSU_hz(plvl, encRetTH, afterCue, afterResp)
+function [p,num] = findIndexSU_hz(plvl, dynTHmin, encRetTH, afterCue, afterResp)
 
 % encRet min @2 and plvl at 95 seemed to have worked nicely
 % maybe dynTH at 1.96 and encRet @1 was sign @6IU
@@ -172,4 +172,5 @@ cd('X:\Luca\data\allSbj\')
 disp(resIU.p);
 
 p = resIU.p;
+num = resIU.num;
 end % END OF FUNCTION
