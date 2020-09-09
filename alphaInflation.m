@@ -4,7 +4,7 @@ nperm = 10000;
 numSU = 300;
 tic
 
-for wdh = 1:1000
+for wdh = 1:10000
     toc
     clearvars -except nperm numSU plvl wdh empDat
     trls = 50;
@@ -59,4 +59,4 @@ for wdh = 1:1000
     
     plvl(wdh) = 1- sum(empDat(wdh) >= numSig) / nperm;
 end % on to the next repetition
-save('alphaOP3.mat', 'plvl', 'empDat');
+save('alphaOP4.mat', 'plvl', 'empDat');

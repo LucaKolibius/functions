@@ -7,6 +7,7 @@ addpath(genpath('X:\Luca\functions')); % my functions
 % addpath('X:\Luca\functions\Neuralynx_19012019'); % Neuralynx (the commons folder function doesnt work on my PC)
 addpath(genpath('X:\Luca\TREBER\Scripts'))
 addpath('X:\Common\fieldtrip-20200310');
+addpath('X:\Common\toolboxes\fieldtrip-20200310');
 ft_defaults;
 dbstop if error
 dbclear if error

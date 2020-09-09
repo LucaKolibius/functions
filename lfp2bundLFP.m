@@ -1,7 +1,8 @@
 clear
 lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
-artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
-load('X:\Luca\data\allSbj\allSpksHZ.mat', 'trigALL')
+% artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
+artFold = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
+load('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
 counter = 1;
 for ses = 1 : size(lfpDir,1)
     disp(ses)
@@ -21,7 +22,7 @@ for ses = 1 : size(lfpDir,1)
     %% MAKE INTO A NEAT STRUCTURE
     for bund = 1 : size(rpplsWire,1)
         clear elecLoc
-        cd('Z:\hanslmas-ieeg-compute\Luca\data\')
+        cd('X:\Luca\data\')
         cd(subjID); cd(sesh);  %% 1007 sesh 1b??
         abc = dir('2*'); cd(abc.name);
         cd('advancedAnalysis\elecLoc');
@@ -64,6 +65,7 @@ for ses = 1 : size(lfpDir,1)
     end
     
 end
+save('X:\Luca\data\allSbj\rpplBund_noSpkInt.mat', 'rpplBund');
 
 
 %% FOR MACRO
