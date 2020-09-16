@@ -1,4 +1,4 @@
-function preCuePowDiff
+function preCuePowDiff % does not consider artefacts yet
 lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
 % artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
 artFold = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
@@ -99,7 +99,7 @@ for spk = 1 : length(allSpks)
 end
 
 hz = trlPow.freq;
-save('preCuePowDiff_orth.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz')
+save('preCuePowDiff_orth.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz', 'skippedDat')
 
 %% LOOKING AT POWER AS A RANDOM EFFECT NOW (CAN ALSO USE diffPow AS A WITHIN BUNDLE POWER DIFFERENCE!
 
