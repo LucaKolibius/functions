@@ -167,7 +167,13 @@ resGU.num = sum([allSpks.iu] == 1);
 resGU.higherIter = sum(resGU.num >= permGU);
 resGU.p = 1 - sum(resGU.num >= permGU) / nperm;
 
-save('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks', 'resIU', 'resGU');
+inputVar.plvl      = plvl;
+inputVar.dynTHmin  = dynTHmin;
+inputVar.encRetTH  = encRetTH;
+inputVar.afterCue  = afterCue;
+inputVar.afterResp = afterResp;
+
+save('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks', 'resIU', 'resGU', 'inputVar');
 cd('X:\Luca\data\allSbj\')
 disp(resIU.p);
 
