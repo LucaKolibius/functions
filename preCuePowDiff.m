@@ -1,275 +1,174 @@
-clearvars -except trigALL
-lfpDir         = dir('X:\George\Analysis\Data Continuous\sub-*.mat');
-idxPow2        = [];
-ndxPow2        = [];
-idxPow         = [];
-ndxPow         = [];
-dxdiff         = [];
-trlChanPowIdx  = [];
-trlChanPowNdx  = [];
-ndxPowGED      = [];  % weighted component
-idxPowGED      = [];
-ndxPowGEDperm  = [];
-idxPowGEDperm  = [];
-nperm          = 1000;
+function preCuePowDiff
+lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
+% artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
+artFold = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
+load('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
+counter = 1;
+skippedDat = [];
+hz = linspace(0, 1000, 1001);
+ortho = 1;
 
+ndxPow  = [];
+idxPow  = [];
+diffPow = [];
+bundleVar = [];
 
-for ses = 1 : size(lfpDir,1)
-    disp(ses)
+for spk = 1 : length(allSpks)
     
-    % get current bidsID & sesh
-    bidsID = lfpDir(ses).name; sesh = bidsID;
-    bidsID = bidsID(1:8);
-    sesh   = sesh(10:12);
-    
-    if ~strcmp(sesh(3), 'b')
-        sesh(3) = [];
-    end
-    
-    % load the data
-    load([lfpDir(ses).folder, filesep, lfpDir(ses).name], 'data_micro');
-    
-    % select the LFP (ignore spikes / trigger / hits)
-    labs   = data_micro.label;
-    noSpks = cellfun(@(x) regexp(x, 'SPKS'), labs, 'un', 0);
-    noTrig = cellfun(@(x) regexp(x, 'TRIG'), labs, 'un', 0);
-    noHits = cellfun(@(x) regexp(x, 'enc+'), labs, 'un', 0);
-    lfpNam =  cellfun(@isempty, noSpks);
-    noTrig = ~cellfun(@isempty, noTrig);
-    noHits = ~cellfun(@isempty, noHits);
-    
-    lfpNam = lfpNam - noTrig - noHits;                          % index all the names of LFPs
-    LFPlab = labs(logical(lfpNam));                             % names of all the LFPs (MB1, MB2, MB3...)
-    bndLab = unique(cellfun(@(x) x(1:end-1), LFPlab, 'un', 0)); % only the unique bundles
-    
-    for bnd = 1 : size(bndLab,1)
-        
-        % which rows of lfp data do we need from data_micro?
-        microIdx = cellfun(@(x) regexp(x,bndLab(bnd)), {labs}, 'un', 0);
-        microIdx = microIdx{1};
-        microIdx = cellfun(@(x) find(x == 1), microIdx, 'un', 0);
-        microIdx = ~cellfun(@isempty, microIdx);
-        
-        % get the LFP from data_micro
-        dat = data_micro.trial{1}(microIdx,:);
-        
-        % FIND THE TRIALS OF THAT BUNDLE THAT ARE INDEXING (IF ANY)
-        % extract all SU that fire during that session + bundle
-        allBund  = {trigALL.wirename};
-        allBund  = cellfun(@(x) x(1:end-1), allBund, 'un', 0);
-        sameBund = and(and(contains({trigALL.bidsID}, bidsID), strcmp({trigALL.sesh}, sesh) ), contains(allBund, bndLab(bnd))); % same subject + session + bundle
-        
-        idxTrl = any(vertcat(trigALL(sameBund).idxTrl),1); % these are the trials that are indexed in that wire
-        
-        % SOMETIMES THERE ARE NO SPIKES. THEN I JUST TAKE THE BEST MW FROM
-        % THAT SESSION AND PARTICIPANT
-        sameBidsSesh = and( contains({trigALL.bidsID}, bidsID), contains({trigALL.sesh}, sesh));
-        sameBidsSesh = find(sameBidsSesh == 1);
-        if isempty(sameBidsSesh)
+    %% SKIP REPEATING MICROWIRE BUNDLES
+    if spk > 1
+        if and(and(contains(allSpks(spk-1).bidsID, allSpks(spk).bidsID), strcmp(allSpks(spk-1).sesh, allSpks(spk).sesh) ), strcmp(allSpks(spk).bundlename, allSpks(spk-1).bundlename)); % same subject + session
             continue
         end
-        
-        sameBidsSesh = sameBidsSesh(1);
-        
-        % if the session does not have any spikes, no trials are indexed
-        % trials. But I need to get the number of trials from a different
-        % bundle in that same session
-        if isempty(idxTrl)
-            idxTrl = logical(zeros(1,size(trigALL(sameBidsSesh).idxTrl,2)));
-        end
-        
-        encTrig    = round(trigALL(sameBidsSesh).encTrigger(trigALL(sameBidsSesh).hitsIdx) * 1000); % encoding trigger
-        encTrig    = [encTrig-1000 encTrig];
-        
-        hz         = linspace(0,1000, 1001);
-        trlPow     = zeros(size(idxTrl,2), 1001);
-        covAll     = [];
-        trlChanPow = [];
-        % IMPORANT: I USE THE AVERAGE PWSPCTRM OVER ALL MW. THIS IS NOT
-        % OPTIMAL. VISUALIZE.
-        for trl = 1 : size(idxTrl, 2)
-            datSnip             = dat(:, encTrig(trl,1) : encTrig(trl,2));
-            trlPow(trl,:)       = mean(abs(fft(datSnip)),1);
-            trlChanPow(trl,:,:) = abs(fft(datSnip));
-            
-            datSnip         = bsxfun(@minus,datSnip,mean(datSnip,2)); % demean
-            covAll(trl,:,:) = datSnip*datSnip';
-        end
-        
-        %% GED IDEA
-        if sum(idxTrl) > 0
-            
-            numIdx = sum(idxTrl);                                           % number of indexed trials
-            
-            for perm = 1 : nperm
-                shuf   = randperm(size(covAll,1));                          % shuffling index
-                tmpCov = covAll(shuf, :,:);                                 % shuffle all covariance matrices
-                
-                covPermIdx = squeeze(mean(tmpCov(1:numIdx,     :, :),1));   % generate averaged, permuted covariance matrix for indexed trials
-                covPermNdx = squeeze(mean(tmpCov(numIdx+1:end, :, :),1));   % generate averaged, permuted covariance matrix for nondxed trials
-                
-                [evecP, evalP] = eig(covPermIdx, covPermNdx);               % GED
-                [~,maxcomp]    = sort(diag(evalP));                         % index of the biggest component
-                evec           = evecP(:,maxcomp(end));
-                
-                for trl = 1 : numIdx
-                    
-                    datSnip      = dat(:, encTrig(shuf(trl),1) : encTrig(shuf(trl),2));
-                    datSnip      = (datSnip' * evec)';                          % weight the MW according to eigenvalues
-                    
-                    temp(trl,:)  = abs(fft(datSnip));
-                    
-                end
-                idxPowGEDperm    = [idxPowGEDperm; mean(temp,1)];
-                
-            end
-            
-            
-            covIdx = squeeze(mean(covAll( idxTrl,:,:),1));
-            covNdx = squeeze(mean(covAll(~idxTrl,:,:),1));
-            
-            [evecs,evals] = eig(covIdx,covNdx); % compute eigenvalues
-            
-            % find best component and compute filter projection
-            [~,maxcomp] = sort(diag(evals)); % index of the biggest component
-            evec        = evecs(:,maxcomp(end));
-            
-            for trl = 1 : size(idxTrl, 2)
-                datSnip  = dat(:, encTrig(trl,1) : encTrig(trl,2));
-                
-                %                 % only take the MW with the highest eigenvalue
-                %                 [~,pos] = max(evec);
-                %                 datSnip2 = datSnip(pos,:);
-                
-                % weight the MW according to eigenvalues
-                datSnip  = (datSnip' * evec)';
-                
-                switch idxTrl(trl)
-                    case 0
-                        ndxPowGED  = [ndxPowGED;  abs(fft(datSnip))];   % weighted component
-                        %                         ndxPowGED2 = [ndxPowGED2; abs(fft(datSnip2))];  % MW with highest eval
-                    case 1
-                        idxPowGED  = [idxPowGED;  abs(fft(datSnip))];
-                        %                         idxPowGED2 = [idxPowGED2; abs(fft(datSnip2))];
-                end
-            end
-        end
-        %%
-        % use every indexed trial and non-indexed trial as a random effect
-        idxPow = [idxPow; trlPow( idxTrl,:)];
-        ndxPow = [ndxPow; trlPow(~idxTrl,:)];
-        
-        % log the average difference per bundle in indexed vs. non-indexed
-        % trials
-        dxdiff  = [dxdiff;   nanmean(trlPow( idxTrl,:) ,1) - nanmean(trlPow(~idxTrl,:) ,1)];
-        
-        % log the mean power response for indexed and non indexed trials in
-        % that bundle
-        idxPow2 = [idxPow2, {nanmean(trlPow( idxTrl,:) ,1)} ];
-        ndxPow2 = [ndxPow2, {nanmean(trlPow(~idxTrl,:) ,1)} ];
-        
-        %%
-        trlChanPowIdx = [trlChanPowIdx; trlChanPow( idxTrl,:,:)];
-        trlChanPowNdx = [trlChanPowNdx; trlChanPow(~idxTrl,:,:)];
-    end
-end
-
-
-%%
-for trl = 1:5:50 % size(loggItIDX,1)
-    figure('units','normalized','outerposition',[0 0 1 1])
-    
-    for chan = 1:8
-        subplot(8,1,chan)
-        plot(squeeze(trlChanPowIdx(trl, chan, :)), 'linew', 2);
-        title('IDX')
-        xlim([0 200])
     end
     
+    %% GET: bidsID + sesh
+    bidsID  = allSpks(spk).bidsID;
+    sesh    = allSpks(spk).sesh;
+    curBund = allSpks(spk).bundlename;
+    allBund = {allSpks.bundlename};
     
-    drawnow
+    %% LOAD IN THE LFP-DATA
+    try
+        load([lfpDir(1).folder, filesep, bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
+    catch
+        skippedDat = [skippedDat; {bidsID} {sesh}];
+        disp('skipDat');
+        continue
+    end
+    
+    %% ORTHOGONALIZE LFP PER BUNDLE
+    switch ortho
+        case 0
+            dataBundLab = cellfun(@(x) x(1:end-1) , data.label, 'un', 0); % extract the bundle of interest
+        case 1
+            data = orthogonVec(data); % with orthogonalization
+            dataBundLab = cellfun(@(x) x(1:end-8) , data.label, 'un', 0); % during orthogonVec the labels are extended so it takes more to get the bundle definition
+    end
+    
+    loadBunds   = strcmp(curBund, dataBundLab);
+    
+    cfg          = [];
+    cfg.channel  = data.label(loadBunds);     % all 8 channels
+    microLFP     = ft_selectdata(cfg, data);  % select
+    
+    %% WHICH TRIALS IN THAT BUNDLE ARE INDEXED?
+    sameBund = and(and(contains({allSpks.bidsID}, bidsID), strcmp({allSpks.sesh}, sesh) ), contains(allBund, curBund)); % same subject + session + bundle
+    idxTrl   = any(vertcat(allSpks(sameBund).idxTrl),1); % these are the trials that are indexed in that wire
+    
+    encTrig  = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1])*1000);
+    
+    %% REDEFINE TRIALS ACCORDING TO encTrig
+    cfg          = [ ];
+    cfg.trl      = [encTrig-1000 encTrig zeros(size(encTrig))];
+    microLFPtrl  = ft_redefinetrial(cfg, microLFP);
+    
+    curNdx = [];
+    curIdx = [];
+    for trl = 1 : length(encTrig)
+        %         trlLFP = microLFP(:,encTrig(trl)-1000:encTrig(trl)); % before FT
+        %         trlPow = abs(fft(trlLFP)); % before FT
+        %         trlPow = mean(trlPow, 1);
+        
+        % FIELDTRIP POWER
+        cfg = [];
+        cfg.output    = 'pow';
+        cfg.channel   = 'all';
+        cfg.method    = 'mtmfft';
+        cfg.foi       = [1:1:200];
+        cfg.taper     = 'hanning';
+        cfg.trials    = trl;
+        trlPow        = ft_freqanalysis(cfg, microLFPtrl);
+        
+        switch idxTrl(trl)
+            case 0
+                ndxPow = [ndxPow; trlPow.powspctrm];
+                curNdx = [curNdx; trlPow.powspctrm];
+            case 1
+                idxPow = [idxPow; trlPow.powspctrm];
+                curIdx = [curIdx; trlPow.powspctrm];
+                bundleVar = [bundleVar {trlPow.powspctrm}]; % I want to see if there is a difference within a bundle
+        end
+        
+    end
+    
+    if ~isempty(curIdx)
+        diffPow = [diffPow; mean(curIdx,1)-mean(curNdx,1)];
+    end
+    
 end
 
-%%
-figure('units','normalized','outerposition',[0 0 1 1])
-hold on
-for ii = 1:200
-    plot(hz, idxPow(ii,:))
-end
+hz = trlPow.freq;
+save('preCuePowDiff_orth.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz')
 
-newIdx = idxPow;
-newIdx = newIdx./max(newIdx,[], 2);
+%% LOOKING AT POWER AS A RANDOM EFFECT NOW (CAN ALSO USE diffPow AS A WITHIN BUNDLE POWER DIFFERENCE!
 
-newNdx = ndxPow;
-newNdx = newNdx./max(newNdx,[], 2);
+%% FREQUENCY BANDS
+delta  = hz<4;
+theta  = hz>= 4 & hz< 8;
+alphaL = hz>= 8 & hz<12;
+alphaH = hz>=12 & hz<16; 
+beta   = hz>=16 & hz<30;
 
-figure('units','normalized','outerposition',[0 0 1 1]); hold on;
-plot(hz, nanmean(newIdx,1), 'color', 'b', 'linew', 3);
-plot(hz, nanmean(newIdx,1) - 1.96 * nanstd(newIdx,1), 'color', 'b', 'linew', 3);
-plot(hz, nanmean(newIdx,1) + 1.96 * nanstd(newIdx,1), 'color', 'b', 'linew', 3);
+%% EMPIRICAL POWER DIFFERENCE
+powDiff = median(idxPow,1)- median(ndxPow,1);
+powDiff = [sum(powDiff(:,delta),2) sum(powDiff(:,theta),2) sum(powDiff(:,alphaL),2) sum(powDiff(:,alphaH),2) sum(powDiff(:,beta),2)];   
 
-plot(hz, nanmean(newNdx,1), 'color', 'r', 'linew', 3);
-plot(hz, nanmean(newNdx,1) - 1.96 * nanstd(newNdx,1), 'color', 'r', 'linew', 3);
-plot(hz, nanmean(newNdx,1) + 1.96 * nanstd(newNdx,1), 'color', 'r', 'linew', 3);
+%% PERMUTATIOM
+allPow = [idxPow; ndxPow];
+numIdx = size(idxPow, 1); % number of indexed trials
+nperm  = 10000;
 
-xlim([0 100])
-
-%% GED VISU
-% figure('units','normalized','outerposition',[0 0 1 1]); hold on;
-% hz = linspace(0,1000, 1001);
-% idxPowGEDnorm = idxPowGED ./ max(idxPowGED, [], 2);
-% subplot(211)
-% imagesc(idxPowGEDnorm)
-% xlim([0 200])
-%
-% subplot(212)
-% ndxPowGEDnorm = ndxPowGED ./ max(ndxPowGED, [], 2);
-% imagesc(ndxPowGEDnorm)
-% xlim([0 200])
-
-% figure('units','normalized','outerposition',[0 0 1 1]); hold on;
-% idxPowGED2norm = idxPowGED2% ./ max(idxPowGED2, [], 2);
-% subplot(211)
-% ii = imagesc(idxPowGED2norm)
-% yy = colorbar;
-% caxis manual
-% % caxis([0 0.5])
-% caxis([0 3000])
-% xlim([0 200])
-%
-% subplot(212)
-% ndxPowGED2norm = ndxPowGED2% ./ max(ndxPowGED2, [], 2);
-% imagesc(ndxPowGED2norm)
-% caxis manual
-% % caxis([0 0.5])
-% caxis([0 3000])
-
-% xlim([0 200])
-
-% weighted component
-figure('units','normalized','outerposition',[0 0 1 1]); hold on;
-plot(hz, mean(idxPowGED,1), 'linew', 3);
-plot(hz, mean(ndxPowGED,1), 'linew', 3);
-
-thUP = prctile(idxPowGEDperm, 95, 1);
-plot(hz, thUP, 'linew', 2, 'color', 'r');
-xlim([0 100])
-
-%% artefacts
-% should be implemented using lfp2microLFP
-
-%% permtest
-nperm = 10000;
-allDat = [newIdx; newNdx];
-permDx = [];
+powDiffPerm = zeros(nperm, length(hz));
 for perm = 1:nperm
-    randdx = randperm(size(allDat,1));
+    randDx     = randperm(size(allPow, 1)); % shuffle power spectra
+    randIdx    = randDx(1:numIdx); % permuted idx power spectra
+    randNdx    = randDx(numIdx+1:end); % permuted ndx power spectra
     
-    permDx(perm,:) = mean(allDat(randdx(1:size(idxPow,1)),:),1);
+    idxPowPerm = allPow( randIdx, :);
+    ndxPowPerm = allPow( randNdx, :);
+    
+    powDiffPerm(perm,:) = median(idxPowPerm,1) - median(ndxPowPerm,1); 
 end
 
-upTH = prctile(permDx,95,1);
+% BINNING
+powDiffPerm = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
 
-figure('units','normalized','outerposition',[0 0 1 1]); hold on;
-plot(hz, nanmean(newIdx,1), 'color', 'b', 'linew', 3);
-plot(hz, upTH, 'color', 'r', 'linew', 3);
+%% PLOTTING
+figure(1); clf; hold on;
+% plot([0 5], [0 0], 'linew', 2, 'color', 'k')
+
+plot(powDiff, 'linew', 2, 'color', 'r');
+plot(prctile(powDiffPerm, 100-(2.5/5)), 'linew', 2, 'color', 'k');
+plot(prctile(powDiffPerm, (2.5/5)), 'linew', 2, 'color', 'k');
+
+xticks([1:5])
+xticklabels({'Delta', 'Theta', 'Low Alpha', 'High Alpha', 'Beta'})
+ylabel('Power Indexed Trials Minus Non-Indexed Trials')
+
+scatter(1, -40, 100, 'k', 'filled', 'p')
+scatter(2, -40, 100, 'k', 'filled', 'p')
+legend({'Empirical Power Difference', '97.5- and 2.5-Percentile'})
+title({'Power Difference Between Indexed And Non-Indexed Trials ','(Pre-Cue & Corrected)'})
+
+
+%% LOOK AT WITHIN BUNDLE VARIANCE?
+figure(1)
+for idx = 1:length(bundleVar)
+    clf
+    for mw = 1:8
+        subplot(2,4,mw)
+        plot(hz, bundleVar{idx}(mw,:), 'b', 'linew', 1)
+        % xlim([0 100])
+        drawnow
+        scale(mw,:) = get(gca, 'YLim');
+    end
+    
+    scale = max(scale, [], 1);
+    for mw = 1:8
+        subplot(2,4,mw)
+        set(gca, 'YLim', [0 scale(2)]);
+    end
+    
+    pause(5)
+end
