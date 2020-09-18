@@ -581,69 +581,70 @@ clear tmpDetectEnv tmpDetect supThres
 
 
 %% Optional: False-positive rejection based on frequency profile
-if cfg.doFalseposRjct
-    fprintf('----- Event rejection by frequency profile\n');
-    cfg.falseposRjct.rejects = cell(numDetectCh,numTrl);
-    
-    for iTrl = 1 : numTrl
-        for jCh = 1 : numDetectCh
-            fprintf('Channel %d/%d (%s): ', jCh, numDetectCh,cfg.detectCh{jCh});
-            
-            tmpTic = tic;
-            currCh = ismember(inData.label,cfg.detectCh{jCh});
-            
-            %--- Segment data
-            tfg         = [];
-            tfg.trl     = [cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(1) * fsample),...
-                           cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(2) * fsample),...
-                           ones(cfg.evtIndiv(jCh,iTrl).numEvt,1) * round(cfg.falseposRjct.timePad(1) * fsample)];
-            tmpTrls   = ft_redefinetrial(tfg,inData);
-            
-            %--- Calculate time frequency representation
-            tfg             = [];
-            tfg.channel     = tmpTrls.label(currCh);
-            tfg.taper       = 'hanning';
-            tfg.method      = 'mtmconvol';
-            tfg.pad         = 'nextpow2';
-            tfg.output      = 'pow';
-            tfg.keeptrials  = 'yes';
-            tfg.foi         = cfg.falseposRjct.tfrFreq;
-            tfg.toi         = cfg.falseposRjct.tfrTime;
-            tfg.t_ftimwin   = cfg.falseposRjct.tfrWin;
-            
-            tmpTFR  = ft_freqanalysis(tfg,tmpTrls);
-            tmpPow  = squeeze(tmpTFR.powspctrm);                                        %% Note: rpt x freq x time
-            tmpTime = arrayfun(@(x) nearest(tmpTFR.time,x),cfg.falseposRjct.avgWin);
-            tmpFreq = arrayfun(@(x) nearest(tmpTFR.freq,x),cfg.falseposRjct.freqlim);
-            
-            %--- Perform event rejection
-            cfg.falseposRjct.rejects{jCh,iTrl} = ones(size(tmpPow,1),1,'logical');
-            
-            tmpPow = squeeze(sum(tmpPow(:,:,tmpTime(1):tmpTime(2)),3));
-            tmpMax = max(tmpPow,[],2);                                      %% Determine maximum per trial
-            tmpPow = tmpPow ./ repmat(tmpMax,1,size(tmpPow,2));             %% Normalise by maximum value
-  
-            for iEvt = 1 : size(tmpPow,1)
-                [~, tmpPks,~,tmpProm] = findpeaks(tmpPow(iEvt,:));
+if numEvt > 0 % @LDK. If there are no spindles this part will throw an error (cfg.evtIndiv(jCh,iTrl).envMaxTime will be non existent because it is defined in L558 which in turn loops over all potential spindles)
+    if cfg.doFalseposRjct
+        fprintf('----- Event rejection by frequency profile\n');
+        cfg.falseposRjct.rejects = cell(numDetectCh,numTrl);
+        
+        for iTrl = 1 : numTrl
+            for jCh = 1 : numDetectCh
+                fprintf('Channel %d/%d (%s): ', jCh, numDetectCh,cfg.detectCh{jCh});
                 
-                hazMax = find(tmpPks >= tmpFreq(1) & tmpPks <= tmpFreq(2));
-                if numel(hazMax) > 0 && any(tmpProm(hazMax) > cfg.falseposRjct.prominence)
-                    cfg.falseposRjct.rejects{jCh,iTrl}(iEvt) = 0;
+                tmpTic = tic;
+                currCh = ismember(inData.label,cfg.detectCh{jCh});
+                
+                %--- Segment data
+                tfg         = [];
+                tfg.trl     = [cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(1) * fsample),...
+                    cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(2) * fsample),...
+                    ones(cfg.evtIndiv(jCh,iTrl).numEvt,1) * round(cfg.falseposRjct.timePad(1) * fsample)];
+                tmpTrls   = ft_redefinetrial(tfg,inData);
+                
+                %--- Calculate time frequency representation
+                tfg             = [];
+                tfg.channel     = tmpTrls.label(currCh);
+                tfg.taper       = 'hanning';
+                tfg.method      = 'mtmconvol';
+                tfg.pad         = 'nextpow2';
+                tfg.output      = 'pow';
+                tfg.keeptrials  = 'yes';
+                tfg.foi         = cfg.falseposRjct.tfrFreq;
+                tfg.toi         = cfg.falseposRjct.tfrTime;
+                tfg.t_ftimwin   = cfg.falseposRjct.tfrWin;
+                
+                tmpTFR  = ft_freqanalysis(tfg,tmpTrls);
+                tmpPow  = squeeze(tmpTFR.powspctrm);                                        %% Note: rpt x freq x time
+                tmpTime = arrayfun(@(x) nearest(tmpTFR.time,x),cfg.falseposRjct.avgWin);
+                tmpFreq = arrayfun(@(x) nearest(tmpTFR.freq,x),cfg.falseposRjct.freqlim);
+                
+                %--- Perform event rejection
+                cfg.falseposRjct.rejects{jCh,iTrl} = ones(size(tmpPow,1),1,'logical');
+                
+                tmpPow = squeeze(sum(tmpPow(:,:,tmpTime(1):tmpTime(2)),3));
+                tmpMax = max(tmpPow,[],2);                                      %% Determine maximum per trial
+                tmpPow = tmpPow ./ repmat(tmpMax,1,size(tmpPow,2));             %% Normalise by maximum value
+                
+                for iEvt = 1 : size(tmpPow,1)
+                    [~, tmpPks,~,tmpProm] = findpeaks(tmpPow(iEvt,:));
+                    
+                    hazMax = find(tmpPks >= tmpFreq(1) & tmpPks <= tmpFreq(2));
+                    if numel(hazMax) > 0 && any(tmpProm(hazMax) > cfg.falseposRjct.prominence)
+                        cfg.falseposRjct.rejects{jCh,iTrl}(iEvt) = 0;
+                    end
                 end
+                
+                fprintf(' reject %d of %d (%.2f) - took %.2f s\n',...
+                    sum(cfg.falseposRjct.rejects{jCh,iTrl}),...
+                    size(tmpPow,1),...
+                    100 * sum(cfg.falseposRjct.rejects{jCh,iTrl}) / size(tmpPow,1),...
+                    toc(tmpTic));
+                
+                clear tmpTrls tmpTFR tmpPow
+                
             end
-            
-            fprintf(' reject %d of %d (%.2f) - took %.2f s\n',...
-                     sum(cfg.falseposRjct.rejects{jCh,iTrl}),...
-                     size(tmpPow,1),...
-                     100 * sum(cfg.falseposRjct.rejects{jCh,iTrl}) / size(tmpPow,1),...
-                     toc(tmpTic));
-            
-            clear tmpTrls tmpTFR tmpPow
-
         end
     end
 end
-
 
 %% add summary statistics to cfg.evtSummary
 for iTrl = 1 : numTrl % loop over trials

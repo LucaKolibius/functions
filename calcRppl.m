@@ -42,9 +42,14 @@ for bund = 1 : size(bndLab,1)
         % run ripple detection on all wires
         outRipple = Slythm_DetectSpindles_v2(tfg, curData);
         
-        rejects = outRipple.falseposRjct.rejects{1};
-        numRej  = sum(rejects);
-        numRip  = outRipple.evtIndiv.numEvt - numRej;
+        if outRipple.evtSummary.numEvt == 0 % if there are no ripples, rejection was skipped in the ripple algorithm
+            numRip = 0;
+            
+        else % most cases
+            rejects = outRipple.falseposRjct.rejects{1};
+            numRej  = sum(rejects);
+            numRip  = outRipple.evtIndiv.numEvt - numRej;
+        end
         
         if numRip >= rppl_exp
             
