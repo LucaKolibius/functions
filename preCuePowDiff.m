@@ -52,8 +52,8 @@ for spk = 1 : length(allSpks)
     cfg.channel  = data.label(loadBunds);     % all 8 channels
     microLFP     = ft_selectdata(cfg, data);  % select
     
-    %% normalize LFP variance
-    microLFP.trial = (microLFP.trial - mean(microLFP.trial,2)) / std(microLFP.trial,0,2);
+%     %% normalize LFP variance
+%     microLFP.trial = (microLFP.trial - mean(microLFP.trial,2)) / std(microLFP.trial,0,2);
     
     %% WHICH TRIALS IN THAT BUNDLE ARE INDEXED?
     sameBund = and(and(contains({allSpks.bidsID}, bidsID), strcmp({allSpks.sesh}, sesh) ), contains(allBund, curBund)); % same subject + session + bundle
@@ -103,7 +103,7 @@ for spk = 1 : length(allSpks)
 end
 
 hz = trlPow.freq;
-save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz', 'skippedDat')
+save('X:\Luca\data\allSbj\preCuePowDiff_orth.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz', 'skippedDat')
 
 %% LOOKING AT POWER AS A RANDOM EFFECT NOW (CAN ALSO USE diffPow AS A WITHIN BUNDLE POWER DIFFERENCE!
 
@@ -137,7 +137,7 @@ for perm = 1:nperm
 end
 
 % BINNING
-save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\powDiffPerm_norm.mat', 'powDiffPerm');
+save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\powDiffPerm.mat', 'powDiffPerm');
 powDiffPermBin = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
 
 %% PLOTTING
