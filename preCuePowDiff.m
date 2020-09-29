@@ -78,6 +78,10 @@ for spk = 1 : length(allSpks)
         cfg.output    = 'pow';
         cfg.channel   = 'all';
         cfg.method    = 'mtmfft';
+<<<<<<< HEAD
+=======
+        cfg.pad       = 4; % padding to increase frequency resolution
+>>>>>>> master
         cfg.foi       = [1:0.25:200];
         cfg.taper     = 'hanning';
         cfg.trials    = trl;
@@ -124,6 +128,7 @@ nperm  = 10000;
 
 powDiffPerm = zeros(nperm, length(hz));
 for perm = 1:nperm
+    disp(perm)
     randDx     = randperm(size(allPow, 1)); % shuffle power spectra
     randIdx    = randDx(1:numIdx); % permuted idx power spectra
     randNdx    = randDx(numIdx+1:end); % permuted ndx power spectra
@@ -135,23 +140,31 @@ for perm = 1:nperm
 end
 
 % BINNING
+<<<<<<< HEAD
 powDiffPerm = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
 save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\powDiffPerm_norm.mat', 'powDiffPerm');
+=======
+powDiffPermBin = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
+>>>>>>> master
 
 %% PLOTTING
 figure(1); clf; hold on;
 % plot([0 5], [0 0], 'linew', 2, 'color', 'k')
 
 plot(powDiff, 'linew', 2, 'color', 'r');
-plot(prctile(powDiffPerm, 100-(2.5/5)), 'linew', 2, 'color', 'k');
-plot(prctile(powDiffPerm, (2.5/5)), 'linew', 2, 'color', 'k');
+plot(prctile(powDiffPermBin, 100-(2.5/5)), 'linew', 2, 'color', 'k');
+plot(prctile(powDiffPermBin, (2.5/5)), 'linew', 2, 'color', 'k');
 
 xticks([1:5])
 xticklabels({'Delta', 'Theta', 'Low Alpha', 'High Alpha', 'Beta'})
 ylabel('Power Indexed Trials Minus Non-Indexed Trials')
 
-scatter(1, -40, 100, 'k', 'filled', 'p')
-scatter(2, -40, 100, 'k', 'filled', 'p')
+scatter(1, -20, 100, 'k', 'filled', 'p')
+% scatter(2, -20, 100, 'k', 'filled', 'p')
+% scatter(3, -20, 100, 'k', 'filled', 'p')
+% scatter(4, -20, 100, 'k', 'filled', 'p')
+% scatter(5, -20, 100, 'k', 'filled', 'p')
+
 legend({'Empirical Power Difference', '97.5- and 2.5-Percentile'})
 title({'Power Difference Between Indexed And Non-Indexed Trials ','(Pre-Cue & Corrected)'})
 
