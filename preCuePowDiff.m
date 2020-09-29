@@ -78,10 +78,7 @@ for spk = 1 : length(allSpks)
         cfg.output    = 'pow';
         cfg.channel   = 'all';
         cfg.method    = 'mtmfft';
-<<<<<<< HEAD
-=======
         cfg.pad       = 4; % padding to increase frequency resolution
->>>>>>> master
         cfg.foi       = [1:0.25:200];
         cfg.taper     = 'hanning';
         cfg.trials    = trl;
@@ -106,7 +103,7 @@ for spk = 1 : length(allSpks)
 end
 
 hz = trlPow.freq;
-save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz', 'skippedDat')
+save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz', 'skippedDat')
 
 %% LOOKING AT POWER AS A RANDOM EFFECT NOW (CAN ALSO USE diffPow AS A WITHIN BUNDLE POWER DIFFERENCE!
 
@@ -140,12 +137,8 @@ for perm = 1:nperm
 end
 
 % BINNING
-<<<<<<< HEAD
-powDiffPerm = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
 save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\powDiffPerm_norm.mat', 'powDiffPerm');
-=======
 powDiffPermBin = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
->>>>>>> master
 
 %% PLOTTING
 figure(1); clf; hold on;
