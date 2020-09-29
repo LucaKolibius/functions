@@ -4,7 +4,7 @@ chanLen   =  length( data.time{1} ) ./ 1000;  % timepoint length divided by samp
 rppl_exp  =  chanLen * (0.023 + 0.00545);           % number of ripples in white noise of same length
 
 % reject artefact wires
-load([artFold, filesep, bidsID, '_', sesh, '_micro_th-8.mat'], 'del_sampleinfo', 'delIx')
+load([artFold, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_micro_th-8.mat'], 'del_sampleinfo', 'delIx')
 
 % NAMES OF THE BUNDLES
 bndLab = unique(cellfun(@(x) x(1:end-1),  data.label, 'un', 0));
