@@ -23,12 +23,15 @@ for spk = 1 : length(allSpks)
     curBund = allSpks(spk).bundlename;
     
     %% LOAD IN THE LFP-DATA
+    % There is no indendent LFP for sub-1007_S1b (it is in the same
+    % recording as S1, it's just another session)
     try
-        load([lfpDir(1).folder, filesep, bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
+        load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
     catch
-        skippedDat = [skippedDat; {bidsID} {sesh}];
-        disp('skipDat');
-        continue
+        error('You should not have to skip any more data (all is fixed)')
+        %         skippedDat = [skippedDat; {bidsID} {sesh}];
+        %         disp('skipDat');
+        %         continue
     end
     
     

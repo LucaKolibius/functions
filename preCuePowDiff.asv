@@ -46,7 +46,7 @@ for spk = 1 : length(allSpks)
             dataBundLab = cellfun(@(x) x(1:end-8) , data.label, 'un', 0); % during orthogonVec the labels are extended so it takes more to get the bundle definition
     end
     
-    loadBunds    = strcmp(curBund, dataBundLab);
+    loadBunds   = strcmp(curBund, dataBundLab);
     
     cfg          = [];
     cfg.channel  = data.label(loadBunds);     % all 8 channels
@@ -75,7 +75,7 @@ for spk = 1 : length(allSpks)
         cfg.output    = 'pow';
         cfg.channel   = 'all';
         cfg.method    = 'mtmfft';
-        cfg.foi       = [1:0.25:200];
+        cfg.foi       = [1:1:200];
         cfg.taper     = 'hanning';
         cfg.trials    = trl;
         trlPow        = ft_freqanalysis(cfg, microLFPtrl);
@@ -152,25 +152,25 @@ legend({'Empirical Power Difference', '97.5- and 2.5-Percentile'})
 title({'Power Difference Between Indexed And Non-Indexed Trials ','(Pre-Cue & Corrected)'})
 
 
-% %% LOOK AT WITHIN BUNDLE VARIANCE?
-% figure(1)
-% for idx = 1:length(bundleVar)
-%     clf
-%     for mw = 1:8
-%         subplot(2,4,mw)
-%         plot(hz, bundleVar{idx}(mw,:), 'b', 'linew', 1)
-%         % xlim([0 100])
-%         drawnow
-%         scale(mw,:) = get(gca, 'YLim');
-%     end
-%     
-%     scale = max(scale, [], 1);
-%     for mw = 1:8
-%         subplot(2,4,mw)
-%         set(gca, 'YLim', [0 scale(2)]);
-%     end
-%     
-%     pause(5)
-% end
+%% LOOK AT WITHIN BUNDLE VARIANCE?
+figure(1)
+for idx = 1:length(bundleVar)
+    clf
+    for mw = 1:8
+        subplot(2,4,mw)
+        plot(hz, bundleVar{idx}(mw,:), 'b', 'linew', 1)
+        % xlim([0 100])
+        drawnow
+        scale(mw,:) = get(gca, 'YLim');
+    end
+    
+    scale = max(scale, [], 1);
+    for mw = 1:8
+        subplot(2,4,mw)
+        set(gca, 'YLim', [0 scale(2)]);
+    end
+    
+    pause(5)
+end
 
 end % END OF FUNCTION
