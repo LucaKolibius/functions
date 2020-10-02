@@ -1,3 +1,12 @@
+%% QUESTIONS
+%  Should I orthogonalize?
+%  If so, should I normalize before or after orthogonalization?
+%  I am now comparing only idx and ndx power for bundles with indexing activity
+%  Should I mean over all channel? I think meaning should have an effect
+%  although I orthogonalize. However, there is an argument that I should no
+%  longer need to mean over all channels since they do not share variance
+%  anymore
+
 function preCuePowDiff % does not consider artefacts yet
 lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
 % artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
@@ -8,11 +17,10 @@ skippedDat = [];
 hz = linspace(0, 1000, 1001);
 ortho = 1;
 
-ndxPow  = [];
-idxPow  = [];
-diffPow = [];
-bundleVar = [];
-
+ndxPow    = [];
+idxPow    = [];
+% diffPow   = [];
+% bundleVar = [];
 for spk = 1 : length(allSpks)
     
     %% SKIP REPEATING MICROWIRE BUNDLES
@@ -34,8 +42,12 @@ for spk = 1 : length(allSpks)
     catch
         skippedDat = [skippedDat; {bidsID} {sesh}];
         disp('skipDat');
+        error('No files should be skipped anymore.')
         continue
     end
+    
+    %% normalize LFP variance
+    microLFP.trial = (microLFP.trial - mean(microLFP.trial,2)) / std(microLFP.trial,0,2);
     
     %% ORTHOGONALIZE LFP PER BUNDLE
     switch ortho
@@ -52,8 +64,7 @@ for spk = 1 : length(allSpks)
     cfg.channel  = data.label(loadBunds);     % all 8 channels
     microLFP     = ft_selectdata(cfg, data);  % select
     
-    %% normalize LFP variance
-    microLFP.trial = (microLFP.trial - mean(microLFP.trial,2)) / std(microLFP.trial,0,2);
+    
     
     %% WHICH TRIALS IN THAT BUNDLE ARE INDEXED?
     sameBund = and(and(contains({allSpks.bidsID}, bidsID), strcmp({allSpks.sesh}, sesh) ), contains(allBund, curBund)); % same subject + session + bundle
@@ -66,8 +77,10 @@ for spk = 1 : length(allSpks)
     cfg.trl      = [encTrig-1000 encTrig zeros(size(encTrig))];
     microLFPtrl  = ft_redefinetrial(cfg, microLFP);
     
-    curNdx = [];
-    curIdx = [];
+    curNdx_allChan  = [];
+    curIdx_allChan  = [];
+    curIdx_chanMean = [];
+    curNdx_chanMean = [];
     for trl = 1 : length(encTrig)
         %         trlLFP = microLFP(:,encTrig(trl)-1000:encTrig(trl)); % before FT
         %         trlPow = abs(fft(trlLFP)); % before FT
@@ -85,34 +98,47 @@ for spk = 1 : length(allSpks)
         trlPow        = ft_freqanalysis(cfg, microLFPtrl);
         
         switch idxTrl(trl)
-            case 0
-                ndxPow = [ndxPow; trlPow.powspctrm];
-                curNdx = [curNdx; trlPow.powspctrm];
-            case 1
-                idxPow = [idxPow; trlPow.powspctrm];
-                curIdx = [curIdx; trlPow.powspctrm];
-                bundleVar = [bundleVar {trlPow.powspctrm}]; % I want to see if there is a difference within a bundle
+            case 0 % trial IS NOT being indexed
+                ndxPow          = [ndxPow;                  trlPow.powspctrm];
+                curNdx_chanMean = [curNdx_chanMean; mean(trlPow.powspctrm,1)]; % SHOULD I MEAN OVER CHANNELS HERE?
+                curNdx_allChan  = [curNdx_allChan,        trlPow.powspctrm,1];
+            
+            case 1 % trial IS being indexed
+                idxPow          = [idxPow;                  trlPow.powspctrm];
+                curIdx_chanMean = [curIdx_chanMean; mean(trlPow.powspctrm,1)]; % SHOULD I MEAN OVER CHANNELS HERE?
+                curIdx_allChan  = [curIdx_allChan,        trlPow.powspctrm,1];
+
+%                 bundleVar = [bundleVar {trlPow.powspctrm}]; % I want to see if there is a difference within a bundle
         end
         
     end
     
     if ~isempty(curIdx)
-        diffPow = [diffPow; mean(curIdx,1)-mean(curNdx,1)];
+        %         diffPow   = [diffPow; mean(curIdx,1)-mean(curNdx,1)];
+        
+        %% THE MEAN OVER ALL 8 MICROWIRES
+        bundlePow_chanMean.idx = [ bundlePow_chanMean.idx {curIdx_chanMean} ];
+        bundlePow_chanMean.ndx = [ bundlePow_chanMean.ndx {curNdx_chanMean} ];
+        
+        %% ALL 8 MICROWIRES AS RANDOM EFFECT
+        bundlePow_allChan.idx  = [ bundlePow_allChan.idx  {curIdx_allChan}  ];
+        bundlePow_allChan.ndx  = [ bundlePow_allChan.ndx  {curNdx_allChan}  ];
+        
     end
     
 end
 
 hz = trlPow.freq;
-save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'diffPow', 'bundleVar', 'idxPow', 'ndxPow', 'hz', 'skippedDat')
+save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'idxPow', 'ndxPow', 'bundlePow', 'hz')
 
 %% LOOKING AT POWER AS A RANDOM EFFECT NOW (CAN ALSO USE diffPow AS A WITHIN BUNDLE POWER DIFFERENCE!
 
 %% FREQUENCY BANDS
-delta  = hz<4;
-theta  = hz>= 4 & hz< 8;
-alphaL = hz>= 8 & hz<12;
-alphaH = hz>=12 & hz<16; 
-beta   = hz>=16 & hz<30;
+freq.delta  = hz<4;
+freq.theta  = hz>= 4 & hz< 8;
+freq.alphaL = hz>= 8 & hz<12;
+freq.alphaH = hz>=12 & hz<16; 
+freq.beta   = hz>=16 & hz<30;
 
 %% EMPIRICAL POWER DIFFERENCE
 powDiff = median(idxPow,1)- median(ndxPow,1);
