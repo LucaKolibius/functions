@@ -163,7 +163,7 @@ for perm = 1:nperm
 end
 
 % BINNING
-save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\powDiffPerm_norm.mat', 'powDiffPerm');
+save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\powDiffPerm.mat', 'powDiffPerm');
 powDiffPermBin = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
 
 %% PLOTTING
