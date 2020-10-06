@@ -51,7 +51,12 @@ for spk = 1 : length(allSpks)
     end
     
     %% normalize LFP variance
-    data.trial = {(data.trial{1} - mean(data.trial{1},2)) ./ std(data.trial{1},0,2)};
+    %     data.trial = {(data.trial{1} - mean(data.trial{1},2)) ./ std(data.trial{1},0,2)};
+    
+    % ONLY DEMEAN
+    cfg = [];
+    cfg.demean = 'yes';
+    data = ft_preprocessing(cfg, data);
     
     %% ORTHOGONALIZE LFP PER BUNDLE
     switch ortho
@@ -105,13 +110,13 @@ for spk = 1 : length(allSpks)
                 ndxPow          = [ndxPow;                  trlPow.powspctrm];
                 curNdx_chanMean = [curNdx_chanMean; mean(trlPow.powspctrm,1)]; % SHOULD I MEAN OVER CHANNELS HERE?
                 curNdx_allChan  = [curNdx_allChan;          trlPow.powspctrm];
-            
+                
             case 1 % trial IS being indexed
                 idxPow          = [idxPow;                  trlPow.powspctrm];
                 curIdx_chanMean = [curIdx_chanMean; mean(trlPow.powspctrm,1)]; % SHOULD I MEAN OVER CHANNELS HERE?
                 curIdx_allChan  = [curIdx_allChan;          trlPow.powspctrm];
-
-%                 bundleVar = [bundleVar {trlPow.powspctrm}]; % I want to see if there is a difference within a bundle
+                
+                %                 bundleVar = [bundleVar {trlPow.powspctrm}]; % I want to see if there is a difference within a bundle
         end
         
     end
@@ -136,8 +141,8 @@ hz = trlPow.freq;
 % this makes bundlePow_chanMean obsolete
 allBund = size(bundlePow_allChan.idx,2);
 for bund = 1: allBund
-        bundlePow_allChan.idx{bund} = reshape(bundlePow_allChan.idx{bund}, 8, [], 797);
-        bundlePow_allChan.ndx{bund} = reshape(bundlePow_allChan.ndx{bund}, 8, [], 797);
+    bundlePow_allChan.idx{bund} = reshape(bundlePow_allChan.idx{bund}, 8, [], 797);
+    bundlePow_allChan.ndx{bund} = reshape(bundlePow_allChan.ndx{bund}, 8, [], 797);
 end
 save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'bundlePow_chanMean', 'bundlePow_allChan', 'hz')
 
@@ -147,12 +152,12 @@ save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'bundlePow_chanMean', 'bu
 freq.delta  = hz<4;
 freq.theta  = hz>= 4 & hz< 8;
 freq.alphaL = hz>= 8 & hz<12;
-freq.alphaH = hz>=12 & hz<16; 
+freq.alphaH = hz>=12 & hz<16;
 freq.beta   = hz>=16 & hz<30;
 
 %% EMPIRICAL POWER DIFFERENCE
 powDiff = median(idxPow,1)- median(ndxPow,1);
-powDiff = [sum(powDiff(:,freq.delta),2) sum(powDiff(:,freq.theta),2) sum(powDiff(:,freq.alphaL),2) sum(powDiff(:,freq.alphaH),2) sum(powDiff(:,freq.beta),2)];   
+powDiff = [sum(powDiff(:,freq.delta),2) sum(powDiff(:,freq.theta),2) sum(powDiff(:,freq.alphaL),2) sum(powDiff(:,freq.alphaH),2) sum(powDiff(:,freq.beta),2)];
 
 %% PERMUTATIOM
 allPow = [idxPow; ndxPow];
@@ -169,12 +174,12 @@ for perm = 1:nperm
     idxPowPerm = allPow( randIdx, :);
     ndxPowPerm = allPow( randNdx, :);
     
-    powDiffPerm(perm,:) = median(idxPowPerm,1) - median(ndxPowPerm,1); 
+    powDiffPerm(perm,:) = median(idxPowPerm,1) - median(ndxPowPerm,1);
 end
 
 % BINNING
 save('Z:\hanslmas-ieeg-compute\Luca\data\allSbj\powDiffPerm.mat', 'powDiffPerm');
-powDiffPermBin = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];   
+powDiffPermBin = [sum(powDiffPerm(:,delta),2) sum(powDiffPerm(:,theta),2) sum(powDiffPerm(:,alphaL),2) sum(powDiffPerm(:,alphaH),2) sum(powDiffPerm(:,beta),2)];
 
 %% PLOTTING
 figure(1); clf; hold on;
@@ -209,13 +214,13 @@ title({'Power Difference Between Indexed And Non-Indexed Trials ','(Pre-Cue & Co
 %         drawnow
 %         scale(mw,:) = get(gca, 'YLim');
 %     end
-%     
+%
 %     scale = max(scale, [], 1);
 %     for mw = 1:8
 %         subplot(2,4,mw)
 %         set(gca, 'YLim', [0 scale(2)]);
 %     end
-%     
+%
 %     pause(5)
 % end
 
