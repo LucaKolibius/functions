@@ -12,10 +12,15 @@ lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat')
 % artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
 artFold = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
 load('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
-counter = 1;
+% counter = 1;
 skippedDat = [];
-hz = linspace(0, 1000, 1001);
 ortho = 1;
+
+
+bundlePow_allChan.idx  = [];
+bundlePow_allChan.ndx  = [];
+bundlePow_chanMean.idx = [];
+bundlePow_chanMean.ndx = [];
 
 ndxPow    = [];
 idxPow    = [];
@@ -38,16 +43,15 @@ for spk = 1 : length(allSpks)
     
     %% LOAD IN THE LFP-DATA
     try
-        load([lfpDir(1).folder, filesep, bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
+        load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
     catch
         skippedDat = [skippedDat; {bidsID} {sesh}];
         disp('skipDat');
         error('No files should be skipped anymore.')
-        continue
     end
     
     %% normalize LFP variance
-    microLFP.trial = (microLFP.trial - mean(microLFP.trial,2)) / std(microLFP.trial,0,2);
+    data.trial = {(data.trial{1} - mean(data.trial{1},2)) ./ std(data.trial{1},0,2)};
     
     %% ORTHOGONALIZE LFP PER BUNDLE
     switch ortho
@@ -63,7 +67,6 @@ for spk = 1 : length(allSpks)
     cfg          = [];
     cfg.channel  = data.label(loadBunds);     % all 8 channels
     microLFP     = ft_selectdata(cfg, data);  % select
-    
     
     
     %% WHICH TRIALS IN THAT BUNDLE ARE INDEXED?
@@ -101,19 +104,19 @@ for spk = 1 : length(allSpks)
             case 0 % trial IS NOT being indexed
                 ndxPow          = [ndxPow;                  trlPow.powspctrm];
                 curNdx_chanMean = [curNdx_chanMean; mean(trlPow.powspctrm,1)]; % SHOULD I MEAN OVER CHANNELS HERE?
-                curNdx_allChan  = [curNdx_allChan,        trlPow.powspctrm,1];
+                curNdx_allChan  = [curNdx_allChan;          trlPow.powspctrm];
             
             case 1 % trial IS being indexed
                 idxPow          = [idxPow;                  trlPow.powspctrm];
                 curIdx_chanMean = [curIdx_chanMean; mean(trlPow.powspctrm,1)]; % SHOULD I MEAN OVER CHANNELS HERE?
-                curIdx_allChan  = [curIdx_allChan,        trlPow.powspctrm,1];
+                curIdx_allChan  = [curIdx_allChan;          trlPow.powspctrm];
 
 %                 bundleVar = [bundleVar {trlPow.powspctrm}]; % I want to see if there is a difference within a bundle
         end
         
     end
     
-    if ~isempty(curIdx)
+    if sum(idxTrl) > 0
         %         diffPow   = [diffPow; mean(curIdx,1)-mean(curNdx,1)];
         
         %% THE MEAN OVER ALL 8 MICROWIRES
@@ -127,9 +130,16 @@ for spk = 1 : length(allSpks)
     end
     
 end
-
 hz = trlPow.freq;
-save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'idxPow', 'ndxPow', 'bundlePow', 'hz')
+
+% changing each bundle into a "chan x trl x pow" cell
+% this makes bundlePow_chanMean obsolete
+allBund = size(bundlePow_allChan.idx,2);
+for bund = 1: allBund
+        bundlePow_allChan.idx{bund} = reshape(bundlePow_allChan.idx{bund}, 8, [], 797);
+        bundlePow_allChan.ndx{bund} = reshape(bundlePow_allChan.ndx{bund}, 8, [], 797);
+end
+save('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'bundlePow_chanMean', 'bundlePow_allChan', 'hz')
 
 %% LOOKING AT POWER AS A RANDOM EFFECT NOW (CAN ALSO USE diffPow AS A WITHIN BUNDLE POWER DIFFERENCE!
 
@@ -142,7 +152,7 @@ freq.beta   = hz>=16 & hz<30;
 
 %% EMPIRICAL POWER DIFFERENCE
 powDiff = median(idxPow,1)- median(ndxPow,1);
-powDiff = [sum(powDiff(:,delta),2) sum(powDiff(:,theta),2) sum(powDiff(:,alphaL),2) sum(powDiff(:,alphaH),2) sum(powDiff(:,beta),2)];   
+powDiff = [sum(powDiff(:,freq.delta),2) sum(powDiff(:,freq.theta),2) sum(powDiff(:,freq.alphaL),2) sum(powDiff(:,freq.alphaH),2) sum(powDiff(:,freq.beta),2)];   
 
 %% PERMUTATIOM
 allPow = [idxPow; ndxPow];
