@@ -22,10 +22,14 @@ end
 
 parfor it = 1 : size(allSpks,2)
     tic
-    spks    = allSpks(it).spks;
     
-    if isempty(spks)
-        continue
+    spks    = allSpks(it).spks;
+    spks = round(spks);
+    
+    if size(spks,1) > 1000
+        idx = randperm(size(spks, 1))
+        spks = spks(idx);
+        spks = spks(1:1000);
     end
     
     numSpks    = size(spks,1);
@@ -35,9 +39,11 @@ parfor it = 1 : size(allSpks,2)
     wirename   = allSpks(it).wirename;
     bundlename = allSpks(it).bundlename;
     
+    % LOAD LFP
     data = load([allMicro, bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_SPKINT.mat'], 'data');
     data = data.data;
 
+    % SELECT BUNDLE LFP
     selChan      = contains(data.label, bundlename);
     cfg          = [];
     cfg.channel  = data.label(selChan);       % all 8 channels
@@ -49,24 +55,28 @@ parfor it = 1 : size(allSpks,2)
     cfgtf        = [];
     cfgtf.method = 'wavelet';
     cfgtf.width  = 8;
-    cfgtf.toi    = 1:100; % 'all';
-    cfgtf.foi    = [80:2:120];
+    cfgtf.toi    = 1:100; %'all';
+    cfgtf.foi    = logspace(log10(1),log10(140))
     cfgtf.output = 'fourier';
     fspec        = ft_freqanalysis(cfgtf,data);
     
     phs          = fspec.fourierspctrm;
-    phs          = angle(phs);   % trl / chan / foi / toi
+    phs          = angle(phs);   % trl=1 / chan / foi / toi
     phs          = squeeze(phs); %       chan / foi / toi
     
     
     % LOOP OVER CHANNELS
     chanFreqDum = [];
     for chan = 1 : numChan
+        % ANGLE VALUES FOR CURRENT CHANNEL
         chanPhs = squeeze(phs(chan,:,:)); % foi / toi
         
         freqDum = [];
+        
         % LOOP OVER FREQUENCIES
         for curFreq = 1 : size(cfgtf.foi,2)
+            
+            % ANGLE VALUES FOR CURRENT CHANNEL AND FREQUENCY
             chanFoiPhs = squeeze(chanPhs(curFreq,:)); % toi
             spkDum = [];
             
@@ -74,7 +84,7 @@ parfor it = 1 : size(allSpks,2)
             for curSpk = 1 : size(spks,1) - 1
                 spkDum(curSpk) = nansum( cos( chanFoiPhs ( spks(curSpk)) - chanFoiPhs ( spks(curSpk+1 : end)) ) );
             end
-            freqDum(curFreq,:) = nansum(spkDum) / (numSpks*(numSpks-1)/2);
+            freqDum(curFreq) = nansum(spkDum) / (numSpks*(numSpks-1)/2);
             
         end
         chanFreqDum(:,chan) = freqDum;
@@ -82,6 +92,11 @@ parfor it = 1 : size(allSpks,2)
     
     allSpks(it).ppc = chanFreqDum; %% SAVE OUTPUT IN MY STRUCTURE
     
-    fprintf('Spike number %d. Took %.2f seconds.\n', it, toc)
+    doneSecs = toc;
+    fprintf('Spike number %d. Took %.2f seconds.\n', it, doneSecs)
+    fprintf('Spike number %d. Took %.2f seconds.\n', it, doneSecs)
+    fprintf('Spike number %d. Took %.2f seconds.\n', it, doneSecs)
+    fprintf('Spike number %d. Took %.2f seconds.\n', it, doneSecs)
+  
 end
 save('spkRpplPPC', 'allSpks');
