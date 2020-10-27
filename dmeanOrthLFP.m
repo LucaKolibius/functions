@@ -9,18 +9,19 @@ function dmeanOrthLFP
 
 
 %% CASTLES VM
+cd('/castles/nr/projects/h/hanslmas-ieeg-compute/Luca/functions');
 addpath('/castles/nr/projects/h/hanslmas-ieeg-compute/Common/toolboxes/fieldtrip-20200310');
 ft_defaults
 
 load('/castles/nr/projects/h/hanslmas-ieeg-compute/Luca/data/allSbj/allSpksHZ.mat', 'allSpks');
 savefolder = '/castles/nr/projects/h/hanslmas-ieeg-compute/Luca/data/microLFP_dmeanOrth/';
 
-for spk = 1 :  size(allSpks,2)
+for spk = 113 :  size(allSpks,2)
     disp(spk);
     
     %% SKIP REPEATING MICROWIRE BUNDLES
     if spk > 1
-        if and(and(contains(allSpks(spk-1).bidsID, allSpks(spk).bidsID), strcmp(allSpks(spk-1).sesh, allSpks(spk).sesh) ), strcmp(allSpks(spk).bundlename, allSpks(spk-1).bundlename)); % same subject + session
+        if and(contains(allSpks(spk-1).bidsID, allSpks(spk).bidsID), strcmp(allSpks(spk-1).sesh, allSpks(spk).sesh) ); % same subject + session
             continue
         end
     end
@@ -57,9 +58,10 @@ for spk = 1 :  size(allSpks,2)
     phsAn.time   = fspec.time;
     phsAn.freq   = fspec.freq;
     
+    clear fspec
     
     %% SAVE LFP
-    save([savefolder, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_dmeanOrth_1000DS_noSPKINT.mat'], 'data', 'phs', '-v7.3');
+    save([savefolder, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_dmeanOrth_1000DS_noSPKINT.mat'], 'data', 'phsAn', '-v7.3');
     
 end % END OF SPK FOR LOOP
 end % END OF FUNCTION
