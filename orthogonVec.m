@@ -1,4 +1,4 @@
-function [ data, success ] = orthogonVec( data )
+function [ data, success, bundles] = orthogonVec( data )
 
 bundles = unique(cellfun(@(x)x(1:end-1),data.label, 'un',0));
 
@@ -42,7 +42,7 @@ for bund = 1 : length(bundles) % LOOP THROUGH BUNDLES
     end
     
     
-    data.label(curMWs) = cellfun(@(x)[x ' GS REF'], data.label(curMWs), 'un', 0);
+%     data.label(curMWs) = cellfun(@(x)[x ' GS REF'], data.label(curMWs), 'un', 0);
 end
 
 end

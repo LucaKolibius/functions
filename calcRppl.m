@@ -11,7 +11,7 @@ bndLab = unique(cellfun(@(x) x(1:end-1),  data.label, 'un', 0));
 
 % ORTHOGONALIZE 
 if ortho == 1
-    [data, success] = orthogonVec(data);
+    [data, success, ~] = orthogonVec(data);
 end
 
 rpplsWire = cell.empty(size(bndLab,1), 0);
