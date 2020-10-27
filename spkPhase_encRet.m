@@ -26,9 +26,6 @@ prevLFPname = [];
 for su = 1 : size(allSpks,2)
     disp(su)
     
-    allSpks(su).encPhs = [];
-    allSpks(su).retPhs = [];
-    
     spks = allSpks(su).spks;
     spks = round(spks);
     
