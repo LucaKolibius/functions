@@ -113,20 +113,17 @@
 
 %% EMPIRICAL DIFFERENCE
 clear
-load('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'bundlePow_allChan', 'hz');
-nperm = 1000;
-difPerm = zeros(nperm, 797);
+load('X:\Luca\data\allSbj\preCuePowDiff_orthNorm.mat', 'allSUPow', 'hz');
 %  MEDIAN OVER TRIAL
 %  SUBSTRACT NDX FROM IDX
-%  MEAN OVER CHANNEL
 %  MEAN OVER BUNDLES
-idxPow = cellfun(@(x) median(x, 2), bundlePow_allChan.idx, 'un', 0); % MEDIAN OVER TRIALS
-ndxPow = cellfun(@(x) median(x, 2), bundlePow_allChan.ndx, 'un', 0); % MEDIAN OVER TRIALS
+idxPow = cellfun(@(x) median(x, 2), allSUPow.idx, 'un', 0); % MEDIAN OVER TRIALS
+ndxPow = cellfun(@(x) median(x, 2), allSUPow.ndx, 'un', 0); % MEDIAN OVER TRIALS
 
-diffPow = cellfun(@minus, idxPow, ndxPow, 'un', 0);     % SUBSTRACT NDX FROM IDX
-diffPow = cellfun(@(x) mean(x, 1), diffPow, 'un', 0);   % MEDIAN OVER CHANNEL (" 1 x 1 x POW ")
-diffPow = cellfun(@squeeze, diffPow, 'un', 0);          % SQUEEZE DIMENSION
-diffPow = cat(2, diffPow{:})';                          % CONCATENATE OVER BUNDLES
+diffPow = cellfun(@minus, idxPow, ndxPow, 'un', 0);         % SUBSTRACT NDX FROM IDX
+% diffPow = cellfun(@(x) mean(x, 1), diffPow, 'un', 0);       % MEDIAN OVER CHANNEL (" 1 x 1 x POW ")
+% diffPow = cellfun(@squeeze, diffPow, 'un', 0);              % SQUEEZE DIMENSION
+diffPow = cat(2, diffPow{:})';                              % CONCATENATE OVER SU
 
 %% Visu
 figure(1); clf;
@@ -141,31 +138,36 @@ plot(nanmean(diffPow,1),   'linew', 2, 'color', 'k');
 xlim([1 75])
 ylim([-0.0020 0.0160])
 
-diffPow = nanmean(diffPow, 1);                      % MEDIAN OVER BUNDLES
+diffPow = nanmean(diffPow, 1);                           % MEDIAN OVER SU
 
+nperm = 1000;
+numSU = size(allSUPow,2);
 difPerm = zeros(nperm, 797);
+
 for perm = 1 : nperm
     tic
     disp(perm)
     
-    shufDiffBund = zeros(94,797);
-    for bund = 1:94
-        numIdx   = size(bundlePow_allChan.idx{bund},2);                              % number of indexed trials in that bundle (" chan x trl x pow ")
-        shufPow  = cat(2, bundlePow_allChan.idx{bund}, bundlePow_allChan.ndx{bund}); % concatenate idx&ndx trials
-        randIdx  = randperm(size(shufPow, 2)); 
-        shufPow  = shufPow(:,randIdx,:);                                             % shuffle "chan x trl x pow" matrix
+    shufDiffSU = zeros(numSU,797);
+    for su = 1:numSU
+        numIdx   = size(allSUPow.idx{su},2);                   % number of trials that this SU indexed
+        shufPow  = cat(1, allSUPow.idx{su}, allSUPow.ndx{su}); % concatenate idx&ndx trials
+        randIdx  = randperm(size(shufPow, 1)); 
+        shufPow  = shufPow(randIdx, :);                        % shuffle "trl x pow" matrix
         
-        shufIdx  = shufPow(:,1:numIdx,:); % EXTRACT "CHAN x TRL x POW" FOR idx
-        shufIdx  = squeeze(median(shufIdx,2)); % MEDIAN OVER TRIALS
+        % IDX
+        shufIdx  = shufPow(1:numIdx,:);                        % EXTRACT "TRL x POW" FOR idx
+        shufIdx  = median(shufIdx,1);                          % MEDIAN OVER TRIALS
         
-        shufNdx  = shufPow(:,numIdx+1:end,:);
-        shufNdx  = squeeze(median(shufNdx,2)); % MEDIAN OVER TRIALS
+        % NDX
+        shufNdx  = shufPow(numIdx+1:end,:);
+        shufNdx  = median(shufNdx,1);                 
         
         shufDiff = shufIdx - shufNdx; 
         
-        shufDiffBund(bund,:) = nanmean(shufDiff,1);
+        shufDiffSU(su,:) = nanmean(shufDiff,1);
     end
-difPerm(perm,:) = nanmean(shufDiffBund,1); 
+difPerm(perm,:) = nanmean(shufDiffSU,1);                        % MEAN OVER SU
 toc
 end
 
