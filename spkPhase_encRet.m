@@ -42,7 +42,7 @@ for su = 1 : size(allSpks,2)
     wirename   = allSpks(su).wirename;
     bundlename = allSpks(su).bundlename;
     
-    lfpName = [allMicro, bidsID, '_', sesh, '_', bundlename, '_onlyMicroLFP_dmeanOrth_1000DS_noSPKINT.mat'];
+    lfpName = [allMicro, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_', bundlename, '_onlyMicroLFP_dmeanOrth_1000DS_noSPKINT.mat'];
     
     %% ONLY LOAD IN LFP IF IT IS A NEW ONE
     if ~strcmp(lfpName, prevLFPname)
