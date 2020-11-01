@@ -2,14 +2,15 @@ function [encSpiketimes_cueLocked, encSpiketimes_respLocked, encSpiketimes_preTr
 try
     cd X:/Luca/data
 catch
-    cd /media/ldk898/rds-share/Luca/data
+    %     cd /media/ldk898/rds-share/Luca/data
+    cd /castles/nr/projects/h/hanslmas-ieeg-compute\Luca\data
 end
 
 mSubject = subjID(1:end-3);
 mSession = subjID(end-1:end);
 
 % if the session name is called 1b then this line prevents an error during cd
-mSubject(regexp(mSubject,'_')) = []; 
+mSubject(regexp(mSubject,'_')) = [];
 if isempty(regexp(mSession,'S', 'ONCE'))
     mSession = ['S', mSession];
 end
@@ -102,7 +103,7 @@ clNames=clNames';
 % open encSpiketimes_respLocked
 % open encSpiketimes_preTrial
 % open encSpiketimes_stimLocked
-% 
+%
 % open retSpiketimes_cueLocked
 % open retSpiketimes_respLocked
 % open clNames

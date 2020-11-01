@@ -5,7 +5,9 @@ mSession = subjID(end-1:end);
 try
     cd X:/Luca/data
 catch
-    cd /media/ldk898/rds-share/Luca/data
+    %     cd /media/ldk898/rds-share/Luca/data
+    cd /castles/nr/projects/h/hanslmas-ieeg-compute\Luca\data
+    
 end
 
 cd(mSubject)
@@ -30,7 +32,7 @@ for ia = 1:size(allSpks,1)
     elseif size(wirename,2)==19 || size(wirename,2)==20
         wirename(1:10)='';
     elseif size(wirename,2)==15 % for P07ERL (wirename example: 'times_Micro_MA1')
-    wirename(1:12)=[];
+        wirename(1:12)=[];
     end
     wirename(end+1:end+3)='Pos';
     
@@ -56,7 +58,7 @@ end
 
 %% negative spikes
 cd ../negDetect
-allSpks = dir('times_CSC*'); % load all wires
+allSpks = dir('times_*'); % load all wires
 
 % create a table with the spike timestamps for all wires, subdivided into
 % cluster (includes 0 cluster with artifacts)

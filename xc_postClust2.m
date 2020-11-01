@@ -12,7 +12,8 @@ function quickfix = xc_postClust2(subjID)
 try
     cd X:/Luca/data
 catch
-    cd /media/ldk898/rds-share/Luca/data
+    %     cd /media/ldk898/rds-share/Luca/data
+    cd /castles/nr/projects/h/hanslmas-ieeg-compute\Luca\data
 end
 
 mSubject = subjID(1:end-3);
@@ -282,75 +283,75 @@ for ic=1:size(deleteClust_th,2)
             
             % another approach would be to delete the cluster that comes after
             % (instead of looking at max amplitude)
-%             if ~deleteClust_th(4,ic) == 0 % hyper-polarization spikes cannot be lag-0
-                
-                % if I have a proper positive spike with a strong
-                % hyperpolarization, I will pick it up in the negative
-                % clustering and delete it, so it will be in cl0
-                if strcmp(varname1(end),'0') || strcmp(varname2(end),'0')
-                    quickfix = [quickfix, ic];
-                    continue
+            %             if ~deleteClust_th(4,ic) == 0 % hyper-polarization spikes cannot be lag-0
+            
+            % if I have a proper positive spike with a strong
+            % hyperpolarization, I will pick it up in the negative
+            % clustering and delete it, so it will be in cl0
+            if strcmp(varname1(end),'0') || strcmp(varname2(end),'0')
+                quickfix = [quickfix, ic];
+                continue
+            end
+            
+            % determine polarity of varname1 and cd to corresponding folder
+            if regexp(varname1, 'Pos') % varname1 is negative
+                varname1pol = 'Pos';
+                cd ../../posDetect
+            elseif regexp(varname1, 'Neg') % varname1 is negative
+                varname1pol = 'Neg';
+                cd ../../negDetect
+            end
+            
+            % load spikedata of varname1
+            load(['times_CSC_', varname1(1:end-6),'.mat'], 'spikes', 'cluster_class')
+            clusterNum = str2double(varname1(end));
+            indx2 = cluster_class(:,1)==clusterNum;
+            
+            % find amplitude of varname1
+            clusterSpikes = spikes(indx2, :);
+            clusterSpikes_avg = mean(clusterSpikes);
+            clusterSpikes_max = max(abs(clusterSpikes_avg));
+            clear spikes cluster_class
+            
+            % now we load varname2
+            % switch to other folder
+            if strcmp(varname1pol, 'Pos')
+                cd ../negDetect
+            elseif strcmp(varname1pol, 'Neg')
+                cd ../posDetect
+            end
+            
+            load(['times_CSC_', varname2(1:end-6),'.mat'], 'spikes', 'cluster_class')
+            clusterNum = str2double(varname2(end));
+            indx2 = cluster_class(:,1)==clusterNum;
+            
+            % find amplitude of varname2
+            clusterSpikes = spikes(indx2, :);
+            clusterSpikes_avg = mean(clusterSpikes);
+            clusterSpikes_max2 = max(abs(clusterSpikes_avg));
+            
+            if clusterSpikes_max >= clusterSpikes_max2 % amplitude of varname1 > amplitude of varname2
+                if deleteClust_th(4,ic)<0 % max(xc) should be below 0 if time_x is before time_y
+                    disp('Hyperpolarization induced spikes: Amplitude and XC are in accordance');
+                    deleteClust_th(6,ic) = 2; % delete only second cluster / varname2
+                else
+                    warning('Hyperpolarization induced spikes: Amplitude and XC are not in accordance. Breaking script.');
+                    disp(ic);
+                    beep
+                    break
                 end
-                
-                % determine polarity of varname1 and cd to corresponding folder
-                if regexp(varname1, 'Pos') % varname1 is negative
-                    varname1pol = 'Pos';
-                    cd ../../posDetect
-                elseif regexp(varname1, 'Neg') % varname1 is negative
-                    varname1pol = 'Neg';
-                    cd ../../negDetect
+            else % amplitude of varname2 > amplitude of varname1
+                if deleteClust_th(4,ic)>0
+                    disp('Hyperpolarization induced spikes: Amplitude and XC are in accordance');
+                    deleteClust_th(6,ic) = 1; % delete only first cluster / varname1
+                else
+                    warning('Hyperpolarization induced spikes: Amplitude and XC are not in accordance. Breaking script.');
+                    disp(ic);
+                    beep
+                    break
                 end
-                
-                % load spikedata of varname1
-                load(['times_CSC_', varname1(1:end-6),'.mat'], 'spikes', 'cluster_class')
-                clusterNum = str2double(varname1(end));
-                indx2 = cluster_class(:,1)==clusterNum;
-                
-                % find amplitude of varname1
-                clusterSpikes = spikes(indx2, :);
-                clusterSpikes_avg = mean(clusterSpikes);
-                clusterSpikes_max = max(abs(clusterSpikes_avg));
-                clear spikes cluster_class
-                
-                % now we load varname2
-                % switch to other folder
-                if strcmp(varname1pol, 'Pos')
-                    cd ../negDetect
-                elseif strcmp(varname1pol, 'Neg')
-                    cd ../posDetect
-                end
-                
-                load(['times_CSC_', varname2(1:end-6),'.mat'], 'spikes', 'cluster_class')
-                clusterNum = str2double(varname2(end));
-                indx2 = cluster_class(:,1)==clusterNum;
-                
-                % find amplitude of varname2
-                clusterSpikes = spikes(indx2, :);
-                clusterSpikes_avg = mean(clusterSpikes);
-                clusterSpikes_max2 = max(abs(clusterSpikes_avg));
-                
-                if clusterSpikes_max >= clusterSpikes_max2 % amplitude of varname1 > amplitude of varname2
-                    if deleteClust_th(4,ic)<0 % max(xc) should be below 0 if time_x is before time_y
-                        disp('Hyperpolarization induced spikes: Amplitude and XC are in accordance');
-                        deleteClust_th(6,ic) = 2; % delete only second cluster / varname2
-                    else
-                        warning('Hyperpolarization induced spikes: Amplitude and XC are not in accordance. Breaking script.');
-                        disp(ic);
-                        beep
-                        break
-                    end
-                else % amplitude of varname2 > amplitude of varname1
-                    if deleteClust_th(4,ic)>0
-                        disp('Hyperpolarization induced spikes: Amplitude and XC are in accordance');
-                        deleteClust_th(6,ic) = 1; % delete only first cluster / varname1
-                    else
-                        warning('Hyperpolarization induced spikes: Amplitude and XC are not in accordance. Breaking script.');
-                        disp(ic);
-                        beep
-                        break
-                    end
-                end
-%             end
+            end
+            %             end
         end
     end
 end
