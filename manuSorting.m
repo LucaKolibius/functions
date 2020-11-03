@@ -33,7 +33,7 @@ for it = it:size(pnClus,1) % loops over all electrode names
         continue
     end
     
-    % aktivität über die zeit (als eigene funktion)
+    % aktivitï¿½t ï¿½ber die zeit (als eigene funktion)
     disp('Loading longitudinal activity...');
     close all
     mkSpiketimes(dts ,it);

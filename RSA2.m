@@ -36,8 +36,9 @@ if exist('manualRej', 'file') ~= 7 % if the folder "manualRej" does not exist ye
     isDone = [];
     artefacts_man = [];
     while isempty(isDone)
-        mInput = input('Row number (in tableTimestamps) of remaining cluster are artefacts (''n'' for no)? ', 's');
-        artefacts_man = [artefacts_man, ',', mInput];
+%         mInput = input('Row number (in tableTimestamps) of remaining cluster are artefacts (''n'' for no)? ', 's');
+        mInput = 'n';
+artefacts_man = [artefacts_man, ',', mInput];
         isDone = findstr(artefacts_man, 'n');
     end
     artefacts_man(end)=[]; % delete the "n"

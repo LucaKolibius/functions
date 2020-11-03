@@ -15,7 +15,7 @@ EVfile = dir([p2d,'*nev']);
 
 % [TimeStampsTTL, ttls, HdrTTL] = Nlx2MatEV(EVfile.name, FieldSelection, ExtractHeader, ExtractMode, ModeArray );
 cd('X:\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
-[TimeStampsTTL, ttls, HdrTTL] = Nlx2MatEV([EVfile.folder, filesep, EVfile.name], FieldSelection, ExtractHeader, ExtractMode, ModeArray );
+[TimeStampsTTL, ttls, ~] = Nlx2MatEV([EVfile.folder, filesep, EVfile.name], FieldSelection, ExtractHeader, ExtractMode, ModeArray );
 % [timestampsCSC, dataSamplesCSC,hdrCSC] = Nlx2MatCSC([p2d,CSCfiles(it).name], FieldSelection, ExtractHeader, ExtractMode, []);% import the raw data
 
 cd(p2d)
