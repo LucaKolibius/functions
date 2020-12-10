@@ -23,42 +23,34 @@ for spk = 1 : length(allSpks)
     %% GET: bidsID + sesh
     bidsID  = allSpks(spk).bidsID;
     sesh    = allSpks(spk).sesh;
-    curBund = allSpks(spk).bundlename;
-    
-    doneLoad = 0;
-    while doneLoad == 0
-        try
-            curWire = [curBund, num2str(allSpks(spk).favChan)];
-            doneLoad = 1;
-        catch
-            disp('Trying to extract favourite channel again in 60s');
-            pause(60);
-        end
-    end
-    
+    favChan = allSpks(spk).favChan;
     idxTrl  = allSpks(spk).idxTrlSing;     % WHICH TRIALS DOES THAT SU INDEX?
-    encTrig  = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1])*1000);
-
-    %% LOAD IN THE LFP-DATA
-    try
-        load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
-    catch
-        skippedDat = [skippedDat; {bidsID} {sesh}];
-        disp('skipDat');
-        error('No files should be skipped anymore.')
-    end
+    encTrig = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1])*1000);
+    bund = allSpks(spk).bundlename;
     
-   
+    %% LOAD IN THE LFP-DATA
+    load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
+    
+    %% SELECT BUNDLE THAT REFLECTS SU INPUT (see spkPhase_encRet)
+    allBund = cellfun(@(x) x(1:end-1), data.label, 'un', 0);
+    bundIdx = strcmp(allBund, bund);
+    
+    cfg         = [];
+    cfg.channel = data.label(bundIdx);
+    microLFP    = ft_selectdata(cfg, data);
+    
+    
     %% REDEFINE TRIALS ACCORDING TO encTrig
     cfg          = [ ];
-    cfg.trl      = [encTrig-1000 encTrig-1 zeros(size(encTrig))];
-    microLFP     = ft_redefinetrial(cfg, data);
-      
+    cfg.trl      = [encTrig-1000-10000-500 encTrig-1+10000 zeros(size(encTrig))]; % 500 is the BL, rest are wings
+    microLFP     = ft_redefinetrial(cfg, microLFP);
+    
+    
+    %% CONSIDER BANDPASS-FILTERING 1-300HZ!!
     
     %% ONLY DEMEAN & ORTHOGONALIZE
-        % normalize LFP variance
+    % normalize LFP variance
     %     data.trial = {(data.trial{1} - mean(data.trial{1},2)) ./ std(data.trial{1},0,2)};
-
     
     cfg        = [];
     cfg.demean = 'yes';
@@ -66,47 +58,63 @@ for spk = 1 : length(allSpks)
     microLFP   = orthogonVec(microLFP);           % orthogonalize
     
     
-    %% SELECT CHANNEL THAT REFLECTS SU INPUT (see spkPhase_encRet)
-    cfg          = [];
-    cfg.channel  = curWire;
-    microLFP     = ft_selectdata(cfg, microLFP); % select
+    
     
     idxTrlPow = [];
     ndxTrlPow = [];
-    goodTrl   = ones(1, length(idxTrl));
     for trl = 1 : length(encTrig)
-      
-      %% AR
-      isAR = iqrAR(microLFP.trial{trl},0);
-      isAR = squeeze(isAR(1,1,:));
-
-      if any(isAR)
-          goodTrl(trl) = 0;
-          continue
-      end
- 
-        % FIELDTRIP POWER
+        
         cfg = [];
         cfg.output    = 'pow';
         cfg.channel   = 'all';
-        cfg.method    = 'mtmfft';
-        cfg.pad       = 4; % padding to increase frequency resolution
-        cfg.foi       = [1:0.25:200];
-        cfg.taper     = 'hanning';
+        cfg.foi       = logspace(log10(1),log10(140));
         cfg.trials    = trl;
+        cfg.toi       = 'all';
+        cfg.width     = 6; %12; % 12 for HF (>40hz)
+        cfg.method    = 'wavelet';
+        
         trlPow        = ft_freqanalysis(cfg, microLFP);
+        freqRes       = trlPow.freq;
+        trlPow        = trlPow.powspctrm;
+        
+        %% AR
+        [isAR,~]      = iqrAR(microLFP.trial{trl},0);
+        isAR          = squeeze(isAR(:,1:length(freqRes),:));
+        trlPow(isAR)  = nan;
+        
+        %% Chose Input Channel per Frequency
+        temp = [];
+        for freq = 1:length(freqRes)
+            realFreq       = freqRes(freq);  % frequency of interest
+            freqDiff       = abs(realFreq-cfg.foi); % find difference from frequency of interest and frequencies for which I have favChan
+            [~, bestMatch] = min(freqDiff); % find index of frequency with minimum difference
+            temp(freq,:)   = trlPow(favChan(bestMatch),freq,:);
+        end
+        trlPow             = temp;
+        
+        %% Cut Wings
+        trlPow(:,1:10000)      = [];
+        trlPow(:,end-9999:end) = [];
+%         imagesc(trlPow)
+
+           %% NORMALIZE TF PLOT
+    baseline = trlPow(:,1:500);
+    trlPow   = trlPow(:,501:end);
+    
+    meanBL = nanmean(baseline,2);
+    stdBL  = nanstd(baseline,0,2);
+    trlPow = (trlPow-meanBL)./stdBL;
         
         switch idxTrl(trl)
             case 0
-                ndxTrlPow = [ndxTrlPow; trlPow.powspctrm];
+                ndxTrlPow = [ndxTrlPow; {trlPow}];
             case 1
-                idxTrlPow = [idxTrlPow; trlPow.powspctrm];
-                
+                idxTrlPow = [idxTrlPow; {trlPow}]; 
         end
         
     end
     
-    if sum(idxTrl(logical(goodTrl))) > 0
+    if sum(idxTrl) > 0
         
         allSUPow.idx  = [ allSUPow.idx  {idxTrlPow}  ];
         allSUPow.ndx  = [ allSUPow.ndx  {ndxTrlPow}  ];
@@ -117,8 +125,8 @@ for spk = 1 : length(allSpks)
     
     %% UPDATE PROGRESS
     lineLength = fprintf('%d spikes out of %d spikes done (%.2f%%).', spk, length(allSpks), spk/length(allSpks)*100);
-%     fprintf(repmat('\b',1,lineLength))
-
+    %     fprintf(repmat('\b',1,lineLength))
+    
 end
 hz = trlPow.freq;
 save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\preCuePowDiff_orthDeMea.mat', 'allSUPow', 'hz')
