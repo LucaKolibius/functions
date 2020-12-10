@@ -1,12 +1,12 @@
 %% NEW VERSION FOR MICRO LFP WITHOUT SPKINT THAT ONLY CONSIDERES BUNDLES IN WHICH I HAVE HIPPOCAMPAL UNITS
 clear
-addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\functions');
-addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\fieldtrip-20200603')
+global prePath;
+addpath([prePath, 'Luca\functions']);
+addpath([prePath, 'Luca\toolboxes\fieldtrip-20200310']); ft_defaults;
 
-lfpDir = dir('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
-% artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
-% artFold = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
-load('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
+% lfpDir = dir([prePath, 'Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat']);  % CHANGED TO NO SPK INT
+lfpDir = dir([prePath, 'Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_*.mat']);  % spkInt in laptop and noSpkInt on local
+load([prePath, 'Luca\data\allSbj\allSpksHZ.mat'], 'allSpks')
 
 allSUPow.idx  = [];
 allSUPow.ndx  = [];
@@ -32,15 +32,17 @@ for spk = 1 : length(allSpks)
     favChan = allSpks(spk).favChan(45:50);
     idxTrl  = allSpks(spk).idxTrlSing;     % WHICH TRIALS DOES THAT SU INDEX?
     encTrig = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1 3])*1000);
-
+    
     %% LOAD IN THE LFP-DATA
     % There is no indendent LFP for sub-1007_S1b (it is in the same
     % recording as S1, it's just another session)
-    load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
+    %     load([lfpDir(1).folder, file    load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
+    abc = dir([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_*.mat']);
+    load([abc.folder, filesep, abc.name], 'data');
     
     %% REDEFINE TRIALS ACCORDING TO encTrig
     cfg          = [ ];
-    cfg.trl      = [encTrig(:,1) encTrig(:,2) zeros(size(encTrig,1))];
+    cfg.trl      = [encTrig(:,1)-1100 encTrig(:,2)+100 zeros(size(encTrig,1))];
     microLFP     = ft_redefinetrial(cfg, data);
     microLFP     = rmfield(microLFP, 'trialinfo');
     
@@ -74,7 +76,6 @@ if sum(idxTrl(logical(goodTrl))) > 0
     
     allSUPow.idx  = [ allSUPow.idx  {idxTrlPow}  ];
     allSUPow.ndx  = [ allSUPow.ndx  {ndxTrlPow}  ];
-    allSUPow.dff  = [ allSUPow.dff {}];
     
 end
 

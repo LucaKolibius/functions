@@ -1,6 +1,8 @@
 % % This should be my new base script
 % fetch_allSubj;
 
+whereAmI(1) % own laptop
+
 % set paths
 addpath(genpath('X:\Luca\functions\wave_clus-master')); % waveclus 3.0
 % addpath('X:\Luca\functions\Neuralynx_19012019'); % Neuralynx (the commons folder function doesnt work on my PC)
