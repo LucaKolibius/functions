@@ -5,7 +5,7 @@
 % Detects discrete slow oscillation events in EEG data
 % - Requires Fieldtrip format
 % - Requires hypnogram within EEG data
-% - If artifacts ('Channel x Trials' cell with each cell containing a [numArt x 2] 
+% - If artifacts ('Channel x Trials' cell with each cell containing a [numArt x 2]
 %   array of artifact start & end) are included in inData, they will be
 %   considered to discard unfit event candidates.
 %
@@ -19,12 +19,12 @@
 % cfg.param.bpfreq      = [freqMin, freqMax]: Lower and upper limit for bandpass filter
 % cfg.param.filtType    = 'fir' or 'but' (default) - determines whether data processingis based on a FIR or butterworth filter
 % cfg.param.thresType   = 'channelwise' (default), 'average' or 'fixed' (not implemented)
-%                         Use thresholds corresponding to each channel, a mean threshold 
+%                         Use thresholds corresponding to each channel, a mean threshold
 %                         across all channels or given fixed values. If channelwise is chosen
 %                         detectCh must be a subset of thresCh.
 % cfg.param.envType     = 'env', 'rms' (default), perform thresholding on rms signal or envelope (via spline interpolation of the peaks in the rectified signal) of bandpassed signal
 % cfg.param.envWin      = Window (in s) to use for envelope calculation (default 0.2 s)
-% cfg.param.artfctPad   = [prePad, postPad] (in s) additional padding around each 
+% cfg.param.artfctPad   = [prePad, postPad] (in s) additional padding around each
 %                         artifact, negative values = pre-artifact padding (default = [0 0])
 %
 % cfg.criterion.len      = [minLen, maxLen]: Minimal and maximal allowed duration of slow oscillation events
@@ -32,7 +32,7 @@
 % cfg.criterion.var      = 'centerSD' (default), 'centerMAD' (median absolute derivation), 'scaleCenter', 'scaleEnvSD' or 'percentile' or 'scaleFiltSD'
 % cfg.criterion.scale    = scalar representing the scaling factor applied to the 'criterionVar' parameter
 % cfg.criterion.padding  = [prePad, postPad] (in s) additional padding around
-%                         each event candidate, negative value = pre-event 
+%                         each event candidate, negative value = pre-event
 %                         padding (default = [0 0])
 
 % cfg.paramOpt.smoothEnv    = If > 0 (default = 0), window (in s) to use for smoothing of envelope signal
@@ -198,14 +198,16 @@ if isfield(inData, 'artifacts')
         for jCh = 1 : numThresCh
             currCh = ismember(inData.label,cfg.thresCh{jCh});
             
-            % @ LDK
-            if isempty(inData.artifacts{currCh,iTrl})
-                continue
-            end
+            %             % @ LDK
+            %             if isempty(inData.artifacts{currCh,iTrl})
+            %                 continue
+            %             end
             
             tmpArt = inData.artifacts{currCh,iTrl} + artfctPad;
             tmpArt(tmpArt(:,1) < 1,1)                         = 1;                              %% Ensure padding does not...
-            tmpArt(tmpArt(:,2) > inData.sampleinfo(iTrl,2),2) = inData.sampleinfo(iTrl,2);      %% exceed data range
+            tmpArt(tmpArt(:,2) > size(inData.trial{iTrl},2),2)  = size(inData.trial{iTrl},2);      %% exceed data range
+            % @LDK: changed from
+            % "tmpArt(tmpArt(:,2) > inData.sampleinfo(iTrl,2),2) = inData.sampleinfo(iTrl,2);" 
             
             for iArt = 1 : size(tmpArt,1)
                 bnryArtfree{iTrl}(jCh,tmpArt(iArt,1):tmpArt(iArt,2)) = 0;
@@ -213,7 +215,7 @@ if isfield(inData, 'artifacts')
             
             clear tmpArt
         end
-    end   
+    end
 end
 
 
@@ -303,19 +305,19 @@ end
 if strcmp(cfg.criterion.var,'percentile')
     cfg.thres.main          = cellfun(@(x) prctile(x, cfg.criterion.scale,2), vardata);
     cfg.thres.upperCutoff   = cellfun(@(x) prctile(x, cfg.paramOpt.upperCutoff,2), vardata);
-
+    
     if cfg.paramOpt.scndThres > 0
         cfg.thres.second = cellfun(@(x) prctile(x, cfg.paramOpt.scndThres,2), vardata);
     end
 else
     cfg.thres.main           = thresfun(cfg.thres.center, cfg.thres.variance, cfg.criterion.scale);
     cfg.thres.upperCutoff    = thresfun(cfg.thres.center, cfg.thres.variance, cfg.paramOpt.upperCutoff);
-
+    
     if cfg.paramOpt.scndThres > 0
         cfg.thres.second = thresfun(cfg.thres.center, cfg.thres.variance, cfg.paramOpt.scndThres);
     end
 end
-    
+
 clear tmpThresEnv
 
 
@@ -341,7 +343,7 @@ if cfg.paramOpt.upperCutoff < Inf
             cfg.thres.second = thresfun(cfg.thres.center, cfg.thres.variance, cfg.paramOpt.scndThres);
         end
     end
-end    
+end
 
 
 %% If desired calculate average threshold
@@ -366,15 +368,18 @@ if isfield(inData, 'artifacts')
         for jCh = 1 : numDetectCh
             currCh = ismember(inData.label,cfg.detectCh{jCh});
             
-            % @ LDK
-            if isempty(inData.artifacts{currCh,iTrl})
-                continue
-            end
+            %             % @ LDK
+            %             if isempty(inData.artifacts{currCh,iTrl})
+            %                 continue
+            %             end
             
             tmpArt = inData.artifacts{currCh,iTrl} + artfctPad;
             tmpArt(tmpArt(:,1) < 1,1)                      = 1;                         %% Ensure padding does not...
-            tmpArt(tmpArt(:,2) > inData.sampleinfo(1,2),2) = inData.sampleinfo(1,2);    %% exceed data range
-            
+%           tmpArt(tmpArt(:,2) > inData.sampleinfo(iTrl,2),2) = inData.sampleinfo(iTrl,2);    %% exceed data range %% FIXED FROM "inData.sampleinfo(iTrl,2),2) = inData.sampleinfo(1,2)" BY LDK
+            tmpArt(tmpArt(:,2) > size(inData.trial{iTrl},2),2)  = size(inData.trial{iTrl},2);
+            % @LDK: changed from
+            % "tmpArt(tmpArt(:,2) > inData.sampleinfo(iTrl,2),2) = inData.sampleinfo(iTrl,2);" 
+
             for iArt = 1 : size(tmpArt,1)
                 bnryArtfree{iTrl}(jCh,tmpArt(iArt,1):tmpArt(iArt,2)) = 0;
             end
@@ -439,9 +444,9 @@ for iTrl = 1 : numTrl % loop over trials
         currCh = ismember(cfg.thresCh, cfg.detectCh{jCh});  % match current detection channel to thresCh vector
         
         supThres{iTrl}(jCh,:) = all([tmpDetectEnv.trial{iTrl}(jCh,:) >= cfg.thres.main(currCh);...
-                                     tmpDetectEnv.trial{iTrl}(jCh,:) <= cfg.thres.upperCutoff(currCh);...
-                                     bnryStage{iTrl};...
-                                     bnryArtfree{iTrl}(jCh,:)]);
+            tmpDetectEnv.trial{iTrl}(jCh,:) <= cfg.thres.upperCutoff(currCh);...
+            bnryStage{iTrl};...
+            bnryArtfree{iTrl}(jCh,:)]);
     end
 end
 
@@ -452,8 +457,8 @@ for iTrl = 1 : numTrl               % loop over trials
         
         cfg.evtIndiv(jCh,iTrl).label   = cfg.detectCh{jCh};                                      % Channel name
         cfg.evtIndiv(jCh,iTrl).tss     = sum(all([bnryStage{iTrl};...                            % time spend asleep (in min), based on artifact-free sleep
-                                                  bnryArtfree{iTrl}(jCh,:)]),2) / (fsample * 60);
-                
+            bnryArtfree{iTrl}(jCh,:)]),2) / (fsample * 60);
+        
         %% Optional: Second thresholding
         if cfg.paramOpt.scndThres > 0
             dsig    = diff([0 supThres{iTrl}(jCh,:) 0]);
@@ -477,11 +482,11 @@ for iTrl = 1 : numTrl               % loop over trials
         rmvIdx                      = cell2mat(reshape(arrayfun(@(x,y) x:y, staIdx(tmpLen), endIdx(tmpLen),'UniformOutput',0),1,sum(tmpLen)));
         supThres{iTrl}(jCh,rmvIdx)  = 0;
         
-%         for kEvt = 1 : size(staIdx,2)
-%             if duration(kEvt) < round(cfg.criterionLen(1,1) * fsample)
-%                 supThres{iTrl}(jCh,staIdx(kEvt):endIdx(kEvt)) = 0;
-%             end
-%         end
+        %         for kEvt = 1 : size(staIdx,2)
+        %             if duration(kEvt) < round(cfg.criterionLen(1,1) * fsample)
+        %                 supThres{iTrl}(jCh,staIdx(kEvt):endIdx(kEvt)) = 0;
+        %             end
+        %         end
         
         %% Optional: Merge intervals closer than specified margin
         if cfg.paramOpt.mergeEvts > 0
@@ -491,7 +496,7 @@ for iTrl = 1 : numTrl               % loop over trials
             
             for kEvt = 1 : size(endIdx,2)-1 %% Check additionally if gap is without artifacts
                 if staIdx(kEvt+1) - endIdx(kEvt) <= round(cfg.paramOpt.mergeEvts * fsample) &&...
-                   all(bnryArtfree{iTrl}(jCh,staIdx(kEvt):endIdx(kEvt+1)))
+                        all(bnryArtfree{iTrl}(jCh,staIdx(kEvt):endIdx(kEvt+1)))
                     supThres{iTrl}(jCh,staIdx(kEvt):endIdx(kEvt+1)) = 1;
                 end
             end
@@ -531,8 +536,8 @@ for iTrl = 1 : numTrl               % loop over trials
         
         for kEvt = 1: size(staIdx,2)    % loop over potential spindles
             if tmpLen(kEvt) <= round(cfg.criterion.len(2)*fsample) && ... % inclusion criterion fullfilled w/o artifacts
-               all(all([bnryStage{iTrl}(staIdx(kEvt) - criterionPad(1) : endIdx(kEvt) + criterionPad(2)); ...
-                        bnryArtfree{iTrl}(jCh,staIdx(kEvt) - criterionPad(1) : endIdx(kEvt) + criterionPad(2))]))
+                    all(all([bnryStage{iTrl}(staIdx(kEvt) - criterionPad(1) : endIdx(kEvt) + criterionPad(2)); ...
+                    bnryArtfree{iTrl}(jCh,staIdx(kEvt) - criterionPad(1) : endIdx(kEvt) + criterionPad(2))]))
                 
                 numEvt = numEvt + 1;
                 
@@ -563,11 +568,11 @@ for iTrl = 1 : numTrl               % loop over trials
                 tmpWin = tmpDetect.trial{iTrl}(jCh,staIdx(kEvt):endIdx(kEvt));
                 [~, EvtPeaks]   = findpeaks(tmpWin,staIdx(kEvt):endIdx(kEvt));
                 [~, EvtTroughs] = findpeaks((-1) * tmpWin,staIdx(kEvt):endIdx(kEvt));
-                                                
+                
                 cfg.evtIndiv(jCh,iTrl).peaks{numEvt}    = EvtPeaks;
                 cfg.evtIndiv(jCh,iTrl).troughs{numEvt}  = EvtTroughs;
                 cfg.evtIndiv(jCh,iTrl).freq(numEvt)     = mean([diff(EvtPeaks),diff(EvtTroughs)]);
-                                
+                
             else % duration criterion NOT fullfilled
                 supThres{iTrl}(jCh,staIdx(kEvt):endIdx(kEvt)) = 0; % remove unfit events from suprathresh-data
             end
@@ -581,67 +586,83 @@ clear tmpDetectEnv tmpDetect supThres
 
 
 %% Optional: False-positive rejection based on frequency profile
-if numEvt > 0 % @LDK. If there are no spindles this part will throw an error (cfg.evtIndiv(jCh,iTrl).envMaxTime will be non existent because it is defined in L558 which in turn loops over all potential spindles)
-    if cfg.doFalseposRjct
-        fprintf('----- Event rejection by frequency profile\n');
-        cfg.falseposRjct.rejects = cell(numDetectCh,numTrl);
-        
-        for iTrl = 1 : numTrl
-            for jCh = 1 : numDetectCh
-                fprintf('Channel %d/%d (%s): ', jCh, numDetectCh,cfg.detectCh{jCh});
-                
-                tmpTic = tic;
-                currCh = ismember(inData.label,cfg.detectCh{jCh});
-                
-                %--- Segment data
-                tfg         = [];
-                tfg.trl     = [cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(1) * fsample),...
-                    cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(2) * fsample),...
-                    ones(cfg.evtIndiv(jCh,iTrl).numEvt,1) * round(cfg.falseposRjct.timePad(1) * fsample)];
-                tmpTrls   = ft_redefinetrial(tfg,inData);
-                
-                %--- Calculate time frequency representation
-                tfg             = [];
-                tfg.channel     = tmpTrls.label(currCh);
-                tfg.taper       = 'hanning';
-                tfg.method      = 'mtmconvol';
-                tfg.pad         = 'nextpow2';
-                tfg.output      = 'pow';
-                tfg.keeptrials  = 'yes';
-                tfg.foi         = cfg.falseposRjct.tfrFreq;
-                tfg.toi         = cfg.falseposRjct.tfrTime;
-                tfg.t_ftimwin   = cfg.falseposRjct.tfrWin;
-                
-                tmpTFR  = ft_freqanalysis(tfg,tmpTrls);
-                tmpPow  = squeeze(tmpTFR.powspctrm);                                        %% Note: rpt x freq x time
-                tmpTime = arrayfun(@(x) nearest(tmpTFR.time,x),cfg.falseposRjct.avgWin);
-                tmpFreq = arrayfun(@(x) nearest(tmpTFR.freq,x),cfg.falseposRjct.freqlim);
-                
-                %--- Perform event rejection
-                cfg.falseposRjct.rejects{jCh,iTrl} = ones(size(tmpPow,1),1,'logical');
-                
-                tmpPow = squeeze(sum(tmpPow(:,:,tmpTime(1):tmpTime(2)),3));
-                tmpMax = max(tmpPow,[],2);                                      %% Determine maximum per trial
-                tmpPow = tmpPow ./ repmat(tmpMax,1,size(tmpPow,2));             %% Normalise by maximum value
-                
-                for iEvt = 1 : size(tmpPow,1)
-                    [~, tmpPks,~,tmpProm] = findpeaks(tmpPow(iEvt,:));
-                    
-                    hazMax = find(tmpPks >= tmpFreq(1) & tmpPks <= tmpFreq(2));
-                    if numel(hazMax) > 0 && any(tmpProm(hazMax) > cfg.falseposRjct.prominence)
-                        cfg.falseposRjct.rejects{jCh,iTrl}(iEvt) = 0;
-                    end
-                end
-                
-                fprintf(' reject %d of %d (%.2f) - took %.2f s\n',...
-                    sum(cfg.falseposRjct.rejects{jCh,iTrl}),...
-                    size(tmpPow,1),...
-                    100 * sum(cfg.falseposRjct.rejects{jCh,iTrl}) / size(tmpPow,1),...
-                    toc(tmpTic));
-                
-                clear tmpTrls tmpTFR tmpPow
-                
+if cfg.doFalseposRjct
+    fprintf('----- Event rejection by frequency profile\n');
+    cfg.falseposRjct.rejects = cell(numDetectCh,numTrl);
+    
+    for iTrl = 1 : numTrl
+        for jCh = 1 : numDetectCh
+            if cfg.evtIndiv(jCh,iTrl).numEvt == 0 % @LDK. If there is no event in a trial an error will occur at the segmentation step further down.
+                continue
             end
+            
+            fprintf('Channel %d/%d (%s): ', jCh, numDetectCh,cfg.detectCh{jCh});
+            
+            tmpTic = tic;
+            currCh = ismember(inData.label,cfg.detectCh{jCh});
+            
+            %--- Segment data
+            tfg         = [];
+%             @LDK ripple events in cfg start at sample 1. the respective
+%             trial might start at sample 543, so the ripple event starts
+%             at 543+cfg time
+%             tfg.trl     = [cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(1) * fsample),...
+%                 cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(2) * fsample),...
+%                 ones(cfg.evtIndiv(jCh,iTrl).numEvt,1) * round(cfg.falseposRjct.timePad(1) * fsample)];
+            tfg.trl     = [cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(1) * fsample) + (inData.sampleinfo(iTrl,1)-1),...
+                cfg.evtIndiv(jCh,iTrl).envMaxTime' + round(cfg.falseposRjct.timePad(2) * fsample) + (inData.sampleinfo(iTrl,1)-1),...
+                ones(cfg.evtIndiv(jCh,iTrl).numEvt,1) * round(cfg.falseposRjct.timePad(1) * fsample)];
+            tmpTrls   = ft_redefinetrial(tfg,inData);
+            
+            %--- Calculate time frequency representation
+            tfg             = [];
+            tfg.channel     = tmpTrls.label(currCh);
+            tfg.taper       = 'hanning';
+            tfg.method      = 'mtmconvol';
+            tfg.pad         = 'nextpow2';
+            tfg.output      = 'pow';
+            tfg.keeptrials  = 'yes';
+            tfg.foi         = cfg.falseposRjct.tfrFreq;
+            tfg.toi         = cfg.falseposRjct.tfrTime;
+            tfg.t_ftimwin   = cfg.falseposRjct.tfrWin;
+            
+            tmpTFR  = ft_freqanalysis(tfg,tmpTrls);
+            tmpPow  = squeeze(tmpTFR.powspctrm);                                        %% Note: rpt x freq x time
+            tmpTime = arrayfun(@(x) nearest(tmpTFR.time,x),cfg.falseposRjct.avgWin);
+            tmpFreq = arrayfun(@(x) nearest(tmpTFR.freq,x),cfg.falseposRjct.freqlim);
+            
+            %--- Perform event rejection
+            cfg.falseposRjct.rejects{jCh,iTrl} = ones(size(tmpPow,1),1,'logical');
+            
+            switch ndims(tmpPow) % @LDK
+                case 3 % rip x freq x time
+                    tmpPow = squeeze(sum(tmpPow(:,:,tmpTime(1):tmpTime(2)),3));     %% previous part
+                    tmpMax = max(tmpPow,[],2);                                      %% Determine maximum per trial
+                    tmpPow = tmpPow ./ repmat(tmpMax,1,size(tmpPow,2));             %% Normalise by maximum value
+                case 2 % only 1 ripple -> freq x time
+                    tmpPow = squeeze(sum(tmpPow(:,tmpTime(1):tmpTime(2)),2));       % @LDK: average over time period [tmpTime(1) to tmpTime(2)]
+                    tmpMax = max(tmpPow);
+                    tmpPow = tmpPow ./ tmpMax;
+                    tmpPow = tmpPow';  % normalized power spectrum;
+            end
+            
+            for iEvt = 1 : size(tmpPow,1)
+                [~, tmpPks,~,tmpProm] = findpeaks(tmpPow(iEvt,:));
+                
+                hazMax = find(tmpPks >= tmpFreq(1) & tmpPks <= tmpFreq(2));
+                if numel(hazMax) > 0 && any(tmpProm(hazMax) > cfg.falseposRjct.prominence)
+                    cfg.falseposRjct.rejects{jCh,iTrl}(iEvt) = 0;
+                end
+            end
+            
+            fprintf(' reject %d of %d (%.2f) - took %.2f s\n',...
+                sum(cfg.falseposRjct.rejects{jCh,iTrl}),...
+                size(tmpPow,1),...
+                100 * sum(cfg.falseposRjct.rejects{jCh,iTrl}) / size(tmpPow,1),...
+                toc(tmpTic));
+            
+            clear tmpTrls tmpTFR tmpPow
+            
         end
     end
 end

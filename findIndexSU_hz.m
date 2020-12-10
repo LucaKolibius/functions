@@ -3,7 +3,7 @@ function [p,num] = findIndexSU_hz(plvl, dynTHmin, encRetTH, afterCue, afterResp)
 % encRet min @2 and plvl at 95 seemed to have worked nicely
 % maybe dynTH at 1.96 and encRet @1 was sign @6IU
 
-load('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
+load('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
 nperm = 10000;
 ewpPerm = cell(size(allSpks));
 
@@ -23,7 +23,7 @@ for spk = 1 : length(allSpks)
         subj = 'P07ERL';
     end
     
-    cd(['X:/Luca/data', filesep, subj, filesep, sesh])
+    cd(['\\analyse4.psy.gla.ac.uk\project0309\Luca\data', filesep, subj, filesep, sesh])
     abc = dir; cd(abc(3).name);
     p2d = [cd, filesep];
     
@@ -173,8 +173,8 @@ inputVar.encRetTH  = encRetTH;
 inputVar.afterCue  = afterCue;
 inputVar.afterResp = afterResp;
 
-save('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks', 'resIU', 'resGU', 'inputVar');
-cd('X:\Luca\data\allSbj\')
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ.mat', 'allSpks', 'resIU', 'resGU', 'inputVar');
+cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj')
 disp(resIU.p);
 
 p = resIU.p;

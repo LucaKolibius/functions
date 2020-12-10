@@ -24,6 +24,8 @@ end
 % positive detection
 par = set_parameters();
 par.detection = 'pos';
+par.sr = 30000;
+Get_spikes('CSC_antHippL1.ncs', 'parallel', false, 'par', par);
 Get_spikes('all', 'parallel', true, 'par', par);
 movefile('*.mat', 'posDetect'); % moves all .mat files that include the just detected spikes into the folder "posDetect"
 

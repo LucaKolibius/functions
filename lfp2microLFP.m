@@ -49,13 +49,14 @@
 clear
 addpath('X:\Common\toolboxes\fieldtrip-20200310');
 ft_defaults;
-LFPfold = 'X:\George\Analysis\Data Continuous\no-SPK-interpolation\';   % LFP;
-LFPdir  = dir([LFPfold, 'sub-*_micro_RAW_DS-1000_SPK-INT.mat']);
+% LFPfold = 'X:\George\Analysis\Data Continuous\no-SPK-interpolation\';   % LFP;
+LFPfold = '\\analyse4.psy.gla.ac.uk\Project0309\Luca\Georges LFP\';
+LFPdir  = dir([LFPfold, 'sub-*_micro_RAW_DS-1000.mat']);
 % artDir = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
 
 
 %% ONLY SELECT NEW DATA
-newLFPidx = cell2mat(cellfun(@(x) contains(x, '16-Sep-2020'), {LFPdir.date}, 'un', 0));
+newLFPidx = cell2mat(cellfun(@(x) contains(x, '01-Dec-2020'), {LFPdir.date}, 'un', 0));
 LFPdir = LFPdir(newLFPidx);
 % start with each SU
 for it = 1:size(LFPdir,1)
@@ -70,7 +71,7 @@ for it = 1:size(LFPdir,1)
 %     load([artDir, bidsID, '_', sesh, '_micro_th-8.mat'], 'delIx', 'del_sampleinfo'); % load artefact timestamps (1x8 cell with each cell corresponding to a wire)
 
 %% MICRO
-load([LFPfold, bidsID, '_', sesh, '_micro_RAW_DS-1000_SPK-INT.mat'], 'data_micro') 
+load([LFPfold, bidsID, '_', sesh, '_micro_RAW_DS-1000.mat'], 'data_micro') 
 
 %% MACRO
 %     load([LFPdir(it).folder, filesep, LFPdir(it).name], 'data_macro')
@@ -104,6 +105,6 @@ load([LFPfold, bidsID, '_', sesh, '_micro_RAW_DS-1000_SPK-INT.mat'], 'data_micro
 %         end
 %     end
     
-save(['X:\Luca\data\microLFP\', bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data')     
+save(['\\analyse4.psy.gla.ac.uk\Project0309\Luca\data\microLFP\', bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data')     
 
 end

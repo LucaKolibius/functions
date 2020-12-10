@@ -1,67 +1,85 @@
 %% NEW VERSION FOR MICRO LFP WITHOUT SPKINT THAT ONLY CONSIDERES BUNDLES IN WHICH I HAVE HIPPOCAMPAL UNITS
 clear
-lfpDir = dir('X:\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
+addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\functions');
+addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\fieldtrip-20200603')
+
+lfpDir = dir('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_noSPKINT.mat');  % CHANGED TO NO SPK INT
 % artFold = 'Z:\hanslmas-ieeg-compute\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
-artFold = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
-load('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
-counter = 1;
-skippedDat = [];
+% artFold = 'X:\George\Analysis\Artefact Rejection\Data Continuous 1000Hz\';    % ARTEFACTS
+load('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ.mat', 'allSpks')
+
+allSUPow.idx  = [];
+allSUPow.ndx  = [];
+allSUPow.dff  = [];
+allFreqRes    = [];
 
 for spk = 1 : length(allSpks)
     
-    %% SKIP REPEATING MICROWIRE BUNDLES
-    if spk > 1
-        if and(and(contains(allSpks(spk-1).bidsID, allSpks(spk).bidsID), strcmp(allSpks(spk-1).sesh, allSpks(spk).sesh) ), strcmp(allSpks(spk).bundlename, allSpks(spk-1).bundlename)); % same subject + session
-            continue
-        end
+    if any(isnan(allSpks(spk).idxTrlSing))
+        continue
+    end
+    
+    if isempty(allSpks(spk).favChan)
+        continue
     end
     
     %% GET: bidsID + sesh
-    bidsID = allSpks(spk).bidsID;
-    sesh   = allSpks(spk).sesh;
-    allBund = {allSpks.bundlename};
+    bidsID  = allSpks(spk).bidsID;
+    sesh    = allSpks(spk).sesh;
+%     allBund = {allSpks.bundlename};
     curBund = allSpks(spk).bundlename;
-    
+%     curWire = [curBund, num2str(allSpks(spk).favChan)];
+    favChan = allSpks(spk).favChan(45:50);
+    idxTrl  = allSpks(spk).idxTrlSing;     % WHICH TRIALS DOES THAT SU INDEX?
+    encTrig = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1 3])*1000);
+
     %% LOAD IN THE LFP-DATA
     % There is no indendent LFP for sub-1007_S1b (it is in the same
     % recording as S1, it's just another session)
-    try
-        load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
-    catch
-        error('You should not have to skip any more data (all is fixed)')
-        %         skippedDat = [skippedDat; {bidsID} {sesh}];
-        %         disp('skipDat');
-        %         continue
-    end
+    load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
     
+    %% REDEFINE TRIALS ACCORDING TO encTrig
+    cfg          = [ ];
+    cfg.trl      = [encTrig(:,1) encTrig(:,2) zeros(size(encTrig,1))];
+    microLFP     = ft_redefinetrial(cfg, data);
+    microLFP     = rmfield(microLFP, 'trialinfo');
     
-    %% SELECT BUNDLE OF INTEREST
-    dataBundLab = cellfun(@(x) x(1:end-1) , data.label, 'un', 0);
-    loadBunds   = strcmp(curBund, dataBundLab);
+    %% DEMEAN & ORTHOGONALIZE   
+    cfg        = [];
+    cfg.demean = 'yes';
+    microLFP   = ft_preprocessing(cfg, microLFP);
+    microLFP   = orthogonVec(microLFP);           % orthogonalize
     
-    cfg          = [];
-    cfg.channel  = data.label(loadBunds);       % all 8 channels
-    data         = ft_selectdata(cfg, data);  % select
+    %% SELECT CHANNEL THAT REFLECTS SU INPUT (see spkPhase_encRet)
+%     cfg          = [];
+%     cfg.channel  = curWire;
+%     microLFP     = ft_selectdata(cfg, microLFP); % select
+
+%% THIS CHANNEL SELECTION COULD BE A DIFFERENT WIRE FOR EACH FREQUENCY
+allBund = cellfun(@(x) x(1:end-1), microLFP.label, 'un', 0);
+bundIdx = strcmp(allBund, curBund);
+
+cfg         = [];
+cfg.channel = microLFP.label(bundIdx);
+microLFP    = ft_selectdata(cfg, microLFP);
+%     %% DETECT RIPPLES
+%     [rpplsWire, rpplLen, bndLab] = calcRppl (microLFP);
+%     allSpks(spk).rppls   = rpplsWire;
+%     allSpks(spk).rpplLen = rpplLen;
     
-    %% DETECT RIPPLES
-    [~, rpplsWire, bndLab] = calcRppl (data, bidsID, sesh, artFold, 1);
+    %% CALCULATE TRIAL RIPPLE POWER (80-140hz)
+    [idxTrlPow, ndxTrlPow, goodTrl, freqRes] = calcRipplPow (microLFP, idxTrl, encTrig, favChan);
     
-    for bund = 1 : size(rpplsWire,1)
-        
-        %% WHICH TRIALS IN THAT BUNDLE ARE INDEXED?
-        sameBund = and(and(contains({allSpks.bidsID}, bidsID), strcmp({allSpks.sesh}, sesh) ), contains(allBund, bndLab(bund))); % same subject + session + bundle
-        idxTrl   = any(vertcat(allSpks(sameBund).idxTrl),1); % these are the trials that are indexed in that wire
-        
-        %% SAVE INFO TO NEW VARIABLE
-        rpplBund(counter).bidsID     = bidsID;
-        rpplBund(counter).sesh       = sesh;
-        rpplBund(counter).bundname   = bndLab{bund};
-        rpplBund(counter).rppls      = rpplsWire{bund};
-        rpplBund(counter).idxTrlBund = idxTrl;
-        rpplBund(counter).encTrigger = allSpks(spk).encTrigger(allSpks(spk).hitsIdx,:);
-        
-        counter  = counter + 1;
- 
-    end
+if sum(idxTrl(logical(goodTrl))) > 0
+    
+    allSUPow.idx  = [ allSUPow.idx  {idxTrlPow}  ];
+    allSUPow.ndx  = [ allSUPow.ndx  {ndxTrlPow}  ];
+    allSUPow.dff  = [ allSUPow.dff {}];
+    
 end
-save('X:\Luca\data\allSbj\rpplBund_noSpkIntOrth.mat', 'rpplBund', 'skippedDat');
+
+allFreqRes = [allFreqRes; freqRes];
+end
+% save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_rppls.mat', 'allSpks');
+
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\rpplPowDiff_orthDeMea.mat', 'allSUPow', 'allFreqRes')

@@ -1,30 +1,31 @@
-%% SPIKE PPC
-%  This does not take any artefacts into account (they have to be NaN'ed before
+%% FavChan Analyse
+% is allSpksHZaftTrans (after transfer from bham) the same as the one I
+% have on castles?? I did some calculations until after midnight on the 6th
+% early 6th of november, but htis variable is from early morning thursday.
+% I also should have a allSpksHZ_phs variable here that is missing
+
 clear
 server = 0;
-
 switch server
     case 0     % RUN ON MY OWN LAPTOP
-        addpath('X:\Common\toolboxes\fieldtrip-20200310');
-        addpath('X:\Luca\toolboxes\CircStat2012a');
+        addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\fieldtrip-20200603');
+        addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\CircStat2012a');
         ft_defaults
-        %         allMicro = 'X:\Luca\data\microLFP\'; % non interpolated LFP
-        allMicro = 'X:\Luca\data\microLFP_dmeanOrth\'; % demeaned and orth. LFP
-        load('X:\Luca\data\allSbj\allSpksHZ.mat', 'allSpks');
+        allMicro = '\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\';
+        load('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ.mat', 'allSpks');
         
     case 1         % RUN ON THE SERVER
-        
-        addpath('/castles/nr/projects/h/hanslmas-ieeg-compute/Common/toolboxes/fieldtrip-20200310');
-        ft_defaults
-        %         allMicro = '/castles/nr/projects/h/hanslmas-ieeg-compute/Luca/data/microLFP/';
-        allMicro = '/castles/nr/projects/h/hanslmas-ieeg-compute\Luca\data\microLFP_dmeanOrth\'; % demeaned and orth. LFP
-        
-        load('/castles/nr/projects/h/hanslmas-ieeg-compute/Luca/data/allSbj/allSpksHZ.mat', 'allSpks');
 end
 
 prevLFPname = [];
+mkPlots = 0;
 for su = 1 : size(allSpks,2)
+    
     disp(su)
+    
+    if ~isempty(allSpks(su).favChan)
+        continue
+    end
     
     spks = allSpks(su).spks;
     spks = round(spks);
@@ -42,30 +43,21 @@ for su = 1 : size(allSpks,2)
     wirename   = allSpks(su).wirename;
     bundlename = allSpks(su).bundlename;
     
-    lfpName = [allMicro, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_', bundlename, '_onlyMicroLFP_dmeanOrth_1000DS_noSPKINT.mat'];
+    lfpName = [allMicro, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'];
     
     %% ONLY LOAD IN LFP IF IT IS A NEW ONE
     if ~strcmp(lfpName, prevLFPname)
-        loaded = 0;
-        while loaded == 0
-            try
-                load(lfpName, 'phsAn');
-                loaded = 1;
-            catch
-                pause(60)
-            end
-        end
-        
+        load(lfpName, 'data');
         prevLFPname = lfpName;
     end
     
-    %     %% SELECT BUNDLE LFP
-    %     selChan      = contains(lfp.label, bundlename);
-    %     cfg          = [];
-    %     cfg.channel  = lfp.label(selChan);       % all 8 channels
-    %     bundLFP      = ft_selectdata(cfg, lfp);  % select
-    %
-    %     numChan      = size(bundLFP.label,1);
+    %% SELECT BUNDLE LFP
+    selChan      = contains(data.label, bundlename);
+    cfg          = [];
+    cfg.channel  = data.label(selChan);       % all 8 channels
+    bundLFP      = ft_selectdata(cfg, data);  % select
+    
+    numChan      = size(bundLFP.label,1);
     
     %% WHICH TRIALS DOES THIS SU INDEX?
     idxTrl = allSpks(su).idxTrl;
@@ -77,40 +69,118 @@ for su = 1 : size(allSpks,2)
     encTrig  = round(allSpks(su).encTrigger(allSpks(su).hitsIdx,[1 3])*1000);
     retTrig  = round(allSpks(su).retTrigger(allSpks(su).hitsIdx,[1 3])*1000);
     
-    %     %% REDEFINE TRIALS ACCORDING TO encTrig
-    %     cfg            = [ ];
-    %     cfg.trl        = [encTrig(:,1) encTrig(:,2) zeros(size(encTrig,1),1)];
-    %     bundPHSencTrl  = ft_redefinetrial(cfg, phsAn);
-    %
-    %     %% REDEFINE TRIALS ACCORDING TO retTrig
-    %     cfg            = [ ];
-    %     cfg.trl        = [retTrig(:,1) retTrig(:,2) zeros(size(retTrig,1),1)];
-    %     bundPHSretTrl  = ft_redefinetrial(cfg, phsAn);
+    %% EXTENDING TRIALS FOR FREQ-ANAL (to get the phase values without nan's at the sides)
+    encTrigEx = [encTrig(:,1)-5000 encTrig(:,2)+5000];
+    retTrigEx = [retTrig(:,1)-5000 retTrig(:,2)+5000];
+    
+    %% REDEFINE TRIALS ACCORDING TO encTrig (for AR)
+    cfg        = [ ];
+    cfg.trl    = [encTrigEx(:,1) encTrigEx(:,2) zeros(size(encTrigEx,1),1)];
+    encLFPex   = ft_redefinetrial(cfg, bundLFP);
+    
+    cfg        = [ ];
+    cfg.trl    = [encTrig(:,1) encTrig(:,2) zeros(size(encTrig,1),1)];
+    encLFP     = ft_redefinetrial(cfg, bundLFP); % for AR
+    
+    %% DEMEAN AND ORTHOGONALIZE ENC
+    cfg        = [];
+    cfg.demean = 'yes';
+    encLFPex   = ft_preprocessing(cfg, encLFPex); % demean
+    encLFPex   = orthogonVec(encLFPex);           % orthogonalize
+    
+    %     encLFP     = ft_preprocessing(cfg, encLFP);
+    
+    %% REDEFINE TRIALS ACCORDING TO retTrig
+    cfg        = [ ];
+    cfg.trl    = [retTrigEx(:,1) retTrigEx(:,2) zeros(size(retTrigEx,1),1)];
+    retLFPex   = ft_redefinetrial(cfg, bundLFP);
+    
+    cfg        = [ ];
+    cfg.trl    = [retTrig(:,1) retTrig(:,2) zeros(size(retTrig,1),1)];
+    retLFP     = ft_redefinetrial(cfg, bundLFP);
+    
+    %% DEMEAN AND ORTHOGONALIZE RET
+    cfg        = [];
+    cfg.demean = 'yes';
+    retLFPex   = ft_preprocessing(cfg, retLFPex);
+    retLFPex   = orthogonVec(retLFPex);
+    
+    %     retLFP     = ft_preprocessing(cfg, retLFP);
     
     %% LOOP OVER TRIALS
     for trl = 1 : size(encTrig,1)
-        % SPIKES THAT OCCUR WITHIN THIS TRIAL DURING ENCODING
-        encSpkTrl = spks(spks>=encTrig(trl, 1) & spks <= encTrig(trl, 2)); % ALL SPIKES THAT OCCUR WITHIN THE CURRENT TRIAL
-        %         if ~isempty(encSpkTrl); encSpkTrl = encSpkTrl(1); end % take the
-        %         first spike (outdated)
         
-        % SPIKES THAT OCCUR WITHIN THIS TRIAL DURING RETRIEVAL
-        retSpkTrl = spks(spks>=retTrig(trl, 1) & spks <= retTrig(trl, 2));
-        %         if ~isempty(retSpkTrl); retSpkTrl = retSpkTrl(1); end % take the
-        %         first spike (outdated)
+        %% EXTRACT FREQSPEC
+        cfgtf        = [];
+        cfgtf.method = 'wavelet';
+        cfgtf.width  = 8;
+        cfgtf.toi    = 'all';
+        cfgtf.foi    = logspace(log10(1),log10(140));
+        cfgtf.output = 'fourier';
+        cfgtf.trials = trl;
         
-        allSpks(su).encPhs(trl,1) = {phsAn.phs(:,:,encSpkTrl)}; % in a cell because variable number of spikes per encoding trial
-        allSpks(su).retPhs(trl,1) = {phsAn.phs(:,:,retSpkTrl)};
+        fspecEnc        = ft_freqanalysis(cfgtf, encLFPex);
+        fspecRet        = ft_freqanalysis(cfgtf, retLFPex);
+        
+        % ENCODING
+        encPhs = squeeze(fspecEnc.fourierspctrm); % FOURIER SPECTRUM OF THAT TRIAL
+        encPhs = encPhs(:,:,5001:end-5000); % SNIP WINGS
+        encPhs = angle(encPhs); % TAKE ANGLE
+        
+        % RETRIEVAL
+        retPhs = squeeze(fspecRet.fourierspctrm); % FOURIER SPECTRUM OF THAT TRIAL
+        retPhs = retPhs(:,:,5001:end-5000); % SNIP WINGS
+        retPhs = angle(retPhs); % TAKE ANGLE
+        
+        %% SPIKES
+        % WITHIN ENCODING TRIAL
+        encSpkTrl = spks(spks>=encTrig(trl, 1) & spks <= encTrig(trl, 2))-encTrig(trl,1)+1; % ALL SPIKES THAT OCCUR WITHIN THE CURRENT TRIAL
+        
+        % WITHIN RETRIEVAL TRIAL
+        retSpkTrl = spks(spks>=retTrig(trl, 1) & spks <= retTrig(trl, 2))-retTrig(trl,1)+1;
+        
+        %% PLUG SPKS INTO LFP PHASE
+        % ENCODING
+        isAR                      = iqrAR(encLFP.trial{trl}, mkPlots);
+        encPhs(isAR)              = NaN;
+        phsDat                    = encPhs(:,:,encSpkTrl);
+        allSpks(su).encPhs(trl,1) = {phsDat};           % in a cell because variable number of spikes per encoding trial
+        
+        % RETRIEVAL
+        isAR                      = iqrAR(retLFP.trial{trl}, mkPlots);
+        retPhs(isAR)              = NaN;
+        phsDat                    = retPhs(:,:,retSpkTrl);
+        allSpks(su).retPhs(trl,1) = {phsDat};           % in a cell because variable number of spikes per encoding trial
+        
+        
     end
     
     %% WHICH CHANNEL IS THE CHOSEN ONE?
-    chanPhsEnc = cat(3, allSpks(su).encPhs{:}); % this is empty if there was not a single spike in any of the encoding trials
+    % this is empty if there was not a single spike in any of the encoding/retrieval trials
+    chanPhsEnc = cat(3, allSpks(su).encPhs{:}); % every trial is {chan x freq x spk} and pooled over spk here
     chanPhsRet = cat(3, allSpks(su).retPhs{:});
     
     for chan = 1:8
         for freq = 1:size(chanPhsEnc,2)
-            [~, zlvlEnc(chan,freq)] = circ_rtest(squeeze(chanPhsEnc(chan, freq,:)));
-            [~, zlvlRet(chan,freq)] = circ_rtest(squeeze(chanPhsRet(chan, freq,:)));
+            % ENCODING
+            extrPhs = squeeze(chanPhsEnc(chan, freq,:));
+            extrPhs(isnan(extrPhs)) = [];
+            switch isempty(extrPhs)
+                case 0
+                    [~, zlvlEnc(chan,freq)] = circ_rtest(extrPhs);
+                case 1 % all spikes occur during artefacts
+                    zlvlEnc(chan,freq) = NaN;
+            end
+            
+            % RETRIEVAL
+            extrPhs = squeeze(chanPhsRet(chan, freq,:));
+            extrPhs(isnan(extrPhs)) = [];
+            switch isempty(extrPhs)
+                case 0
+                    [~, zlvlRet(chan,freq)] = circ_rtest(extrPhs);
+                case 1 % all spikes occur during artefacts
+                    zlvlRet(chan,freq) = NaN;
+            end
         end
     end
     
@@ -119,11 +189,20 @@ for su = 1 : size(allSpks,2)
     %         [plvl(chan,2) zlvl(chan,2)] = circ_rtest(chanPhsRet);
     %     end
     
-    encRetMax = max(zlvlEnc, zlvlRet); % take maximum z-value of encoding vs. retrieval
-    chanMax = max(encRetMax, [], 2); % for each channel, take the maximum value over the frequency spectrum
-    [~, chosChan] =max(chanMax);
-    allSpks(su).LFPchan = chosChan;
+    %% OLD TO FIND THE HIGHEST CHANNEL OVER ALL FREQUENCIES
+    %     encRetMax     = max(zlvlEnc, zlvlRet); % take maximum z-value of encoding vs. retrieval
+    %     chanMax       = max(encRetMax, [], 2); % for each channel, take the maximum value over the frequency spectrum
+    %     [~, chosChan] = max(chanMax);
+    %     allSpks(su).favChan = chosChan;
+    
+    %% FIND THE CHANNEL WITH THE HIGHEST INPUT PER FREQUENCY (see cfgtf.foi)
+    encRetMax           = max(zlvlEnc, zlvlRet); % take maximum z-value of encoding vs. retrieval
+    [~, chosChan]       = max(encRetMax, [], 1); % for each channel, take the maximum value over the frequency spectrum
+    allSpks(su).favChan = chosChan;
     
 end
 
-save('X:\Luca\data\allSbj\allSpksHZ_phs', 'allSpks');
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_phs', 'allSpks', '-v7.3'); % with encoding and retrieval phases
+allSpks = rmfield(allSpks, 'encPhs');
+allSpks = rmfield(allSpks, 'retPhs');
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ', 'allSpks'); % light version with just the favourite channel

@@ -32,13 +32,13 @@ if exist('manualRej', 'file') ~= 7 % if the folder "manualRej" does not exist ye
     cd manualRej
     
     % manual artefact rejection
-    cd
+    cd ..
     isDone = [];
     artefacts_man = [];
     while isempty(isDone)
-%         mInput = input('Row number (in tableTimestamps) of remaining cluster are artefacts (''n'' for no)? ', 's');
+        %         mInput = input('Row number (in tableTimestamps) of remaining cluster are artefacts (''n'' for no)? ', 's');
         mInput = 'n';
-artefacts_man = [artefacts_man, ',', mInput];
+        artefacts_man = [artefacts_man, ',', mInput];
         isDone = findstr(artefacts_man, 'n');
     end
     artefacts_man(end)=[]; % delete the "n"
@@ -50,7 +50,7 @@ elseif exist('manualRej','file') == 7 % if the folder "manualRej" already exists
     load(abc.name);
 end
 
-clNames(artefacts_man-2) = [];
+% clNames(artefacts_man-2) = [];
 encSpiketimes_cueLocked(artefacts_man,:)  = [];
 encSpiketimes_respLocked(artefacts_man,:) = [];
 encSpiketimes_preTrial(artefacts_man,:)   = [];

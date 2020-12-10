@@ -8,7 +8,7 @@ ExtractHeader = 1;
 ExtractMode = 1; % 2 = extract record index range; 4 = extract timestamps range.
 
 [p2d] = [cd, filesep];
-cd('X:\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
+cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
 
 [CSCfiles] = dir([p2d,'*.ncs']);
 

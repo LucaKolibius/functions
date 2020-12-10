@@ -3,7 +3,6 @@
 
 % set paths
 addpath(genpath('X:\Luca\functions\wave_clus-master')); % waveclus 3.0
-addpath(genpath('X:\Luca\functions')); % my functions
 % addpath('X:\Luca\functions\Neuralynx_19012019'); % Neuralynx (the commons folder function doesnt work on my PC)
 addpath(genpath('X:\Luca\TREBER\Scripts'))
 addpath('X:\Common\fieldtrip-20200310');
@@ -12,8 +11,17 @@ ft_defaults;
 dbstop if error
 dbclear if error
 
-
-
+addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\fieldtrip-20200603')
+addpath(genpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\functions')); % my functions
+fixDoubleLFP % fix: on the same bundle IU1 indexes trl1 and IU2 does not index trl1. don't count lfp double.
+findIndexSU_hz(99, 1.645, 1.645, 0, 0) % find index units
+lfp2microLFP % save LFP from georges structure into mine 
+lfp2rpplBund
+rppl_statsVisu
+preCuePowDiff % precue Power || try out uniqFreq per freqBand & try out time-frequency
+preCuePowDiff_perm % statistics on it
+spkRppl_ppc
+spkPhase_encRet % favChan
 
 %%
 % compare micro LFP of precue period (-1:0) for indexed and non-indexed
