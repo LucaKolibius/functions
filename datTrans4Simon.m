@@ -1,12 +1,17 @@
-%\\analyse4\Project0310\iEEG_DATA\MICRO\P07\fVSpEM\2017-05-06_19-13-42
+%cd('\\analyse4\Project0310\iEEG_DATA\MICRO\P07\fVSpEM\2017-05-06_19-13-42')
 %cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\4simon2\P07\fVSpEM\2017-05-06_19-13-42')
 %% Spike Daten segmentiert (-7 bis 7 Sekunden um Cue Onset).
 %  Das sind Files mit der Extension “_lfpDataStimLockedSegmenteddownsampled.mat”.
 %
 % Darin sind dann folgende Variablen enthalten:
 % sortedSpikesSEG: pro channel spikes, spike times, waveshape, etc. das ist der output von Waveclus, das solltest du in etwa kennen. Wichtig ist dass die spike times hier in Sekunden angegeben werden, relativ zum Cue onset, in einem Intervall zwischen -7 und 7 Sekunden.
-
+ 
 addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\functions');
+% addpath(genpath('\\analyse4.psy.gla.ac.uk\Project0310\RDS\Common\mcode\tbx\chronux_2_11\spectral_analysis'))
+addpath(genpath('\\analyse4.psy.gla.ac.uk\project0310\RDS\Common\mcode\tbx\chronux_2_11\spectral_analysis'));
+addpath('\\analyse4.psy.gla.ac.uk\project0310\RDS\Common\mcode\utils\LFP'); % cleanLFPfromLineNoise
+addpath('\\analyse4.psy.gla.ac.uk\project0310\RDS\Common\mcode\helper'); % CleanLineNoise
+
 clear
 load('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ.mat', 'allSpks');
 allBids  = {allSpks.bidsID};
@@ -15,7 +20,7 @@ allWire  = {allSpks.wirename};
 
 prevID = [];
 dsFs    = 1000;
-for su = 182%: length(allSpks)
+for su = [284:629 1:283] %1:length(allSpks)
     clearvars -except allBids allSesh allWire prevID dsFs su allSpks
     cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\data')
     bidsID          = allSpks(su).bidsID;
@@ -52,6 +57,15 @@ for su = 182%: length(allSpks)
     %% LFP
     load(['\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\with spk int\',bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_SPKINT.mat'], 'data')
     chanLab = data.label';
+    
+%     % GET OUT LINENOISE
+%     step = 3;  % 3 iterations
+%     s    = 15; % 15 second moving time window
+%     for chan = 1:size(chanLab,2)
+%         lfp = data.trial{1}(chan,:);
+%         [lfpClean] = cleanLFPfromLineNoise(lfp,1000,step,s);
+%         data.trial{1}(chan,:) = lfpClean;
+%     end
     
     for chan = 1 : size(chanLab,2)
         lfp = data.trial{1}(chan,:); %7s before and after for each trial
@@ -150,8 +164,8 @@ for su = 182%: length(allSpks)
             %% SAVING TO A GENERAL VARIABLE
             allSpkTms = [allSpkTms, spks];
             allCl     = [allCl, ones(1,numSpks)*curSU];
-            wvf       = [wvf,spikes(clIdx,:)'];
-            coeffs    = [coeffs; inspk(clIdx,:)];
+            wvf       = [wvf, spikes(clIdx,:)'];
+%             coeffs    = [coeffs; inspk(clIdx,:)];
             
         end
         
@@ -176,6 +190,7 @@ for su = 182%: length(allSpks)
             allNewSpks = [allNewSpks, newSpks];
         end
         
+        wvf = reSort(3:end,:)';
         sortedSpikesSEG{1,chan}=struct('newSpikeTimes',allSpkTms,'assignedCluster',allCl,'wavf',wvf,...
             'num_clus',length(sameWireSpks) ,'SD',[],'SpikeTimesSeg',allNewSpks(1,:), 'trl',allNewSpks(3,:),'assignedClusterSeg',allNewSpks(2,:));
         

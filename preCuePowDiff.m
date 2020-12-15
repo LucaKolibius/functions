@@ -128,7 +128,7 @@ for spk = 1 : length(allSpks)
     %     fprintf(repmat('\b',1,lineLength))
     
 end
-hz = trlPow.freq;
+freqRes = trlPow.freq;
 save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\preCuePowDiff_orthDeMea.mat', 'allSUPow', 'hz')
 
 end % END OF FUNCTION

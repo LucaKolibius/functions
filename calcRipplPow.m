@@ -50,8 +50,8 @@ for trl = 1 : length(encTrig)
     trlPow(:,end-99:end) = [];
     
     %% NORMALIZE TF PLOT
-    baseline = trlPow(:,1:1000);
-    trlPow   = trlPow(:,1001:end);
+    baseline = trlPow(:,1:200);
+    trlPow   = trlPow(:,201:end);
     
     meanBL = nanmean(baseline,2);
     stdBL  = nanstd(baseline,0,2);

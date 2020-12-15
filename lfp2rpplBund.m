@@ -45,7 +45,7 @@ for spk = 1 : length(allSpks)
     
     %% REDEFINE TRIALS ACCORDING TO encTrig
     cfg          = [ ];
-    cfg.trl      = [encTrig(:,1)-1100 encTrig(:,2)+100 zeros(size(encTrig,1))];
+    cfg.trl      = [encTrig(:,1)-1000-100-200 encTrig(:,2)+100 zeros(size(encTrig,1))];
     microLFP     = ft_redefinetrial(cfg, data);
     microLFP     = rmfield(microLFP, 'trialinfo');
     

@@ -4,8 +4,8 @@ load('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\preCuePowDiff_orthDe
 %  MEDIAN OVER TRIAL
 %  SUBSTRACT NDX FROM IDX
 %  MEAN OVER BUNDLES
-idxPow = cellfun(@(x) median(x, 1), allSUPow.idx, 'un', 0); % MEDIAN OVER TRIALS
-ndxPow = cellfun(@(x) median(x, 1), allSUPow.ndx, 'un', 0); % MEDIAN OVER TRIALS
+idxPow = cellfun(@(x) nanmedian(x, 1), allSUPow.idx, 'un', 0); % MEDIAN OVER TRIALS
+ndxPow = cellfun(@(x) nanmedian(x, 1), allSUPow.ndx, 'un', 0); % MEDIAN OVER TRIALS
 
 diffPow = cellfun(@minus, idxPow, ndxPow, 'un', 0);         % SUBSTRACT NDX FROM IDX
 % diffPow = cellfun(@(x) mean(x, 1), diffPow, 'un', 0);       % MEDIAN OVER CHANNEL (" 1 x 1 x POW ")
@@ -17,15 +17,15 @@ figure(1); clf;
 subplot(211); hold on;
 title('Mean over Channel')
 for ii = 1:size(diffPow,1); plot(hz, diffPow(ii,:), 'color', [0 0 0 0.05], 'linew', 5);end
-xlim([1 80])
+% xlim([1 80])
 subplot(212); hold on;
 title('Median or Mean over Bundles')
 plot(hz, nanmedian(diffPow,1), 'linew', 2, 'color', 'b');
 plot(hz, nanmean(diffPow,1),   'linew', 2, 'color', 'k');
-xlim([1 80])
+% xlim([1 80])
 % ylim([-0.0020 0.0160])
 legend({'median', 'mean'})
-plot([0 80],[0 0 ], 'k--');
+plot([80 140],[0 0 ], 'k--');
 
 diffPow = nanmean(diffPow, 1);                           % MEDIAN OVER SU
 
@@ -46,11 +46,11 @@ for perm = 1 : nperm
         
         % IDX
         shufIdx  = shufPow(1:numIdx,:);                        % EXTRACT "TRL x POW" FOR idx
-        shufIdx  = median(shufIdx,1);                          % MEDIAN OVER TRIALS
+        shufIdx  = nanmedian(shufIdx,1);                          % MEDIAN OVER TRIALS
         
         % NDX                                                  & REPEAT FOR NDX
         shufNdx  = shufPow(numIdx+1:end,:);
-        shufNdx  = median(shufNdx,1);                 
+        shufNdx  = nanmedian(shufNdx,1);                 
         
         shufDiff = shufIdx - shufNdx; 
         
@@ -62,13 +62,14 @@ end
 
 %% Visu (NON-BINNED)
 figure(2); clf; hold on;
-title('Difference PreCue Power')
+title('Difference Ripple Power -  Whole Trial (85-140 hz)')
 plot(hz, diffPow,   'linew', 2, 'color', 'b');
-plot(hz, prctile(difPerm, 95, 1), 'linew', 1.5, 'color', 'r');
-plot(hz, prctile(difPerm,  5, 1), 'linew', 1.5, 'color', 'r');
-xlim([1 75])
+plot(hz, prctile(difPerm, 100-5/6, 1), 'linew', 1.5, 'color', 'r');
+plot(hz, prctile(difPerm,  5/6, 1), 'linew', 1.5, 'color', 'r');
+xlim([hz(1) hz(end)])
 xlabel('Freqzency [Hz]')
 ylabel('Power (Idx-Ndx)')
+legend({'Power Difference', 'Upper & Lower Threshold (corrected)'});
 % ylim([-0.0020 0.0160])
 
 
