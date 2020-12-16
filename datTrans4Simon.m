@@ -20,7 +20,7 @@ allWire  = {allSpks.wirename};
 
 prevID = [];
 dsFs    = 1000;
-for su = [284:629 1:283] %1:length(allSpks)
+for su = [491:629 1:283] %[284:629 1:283] %1:length(allSpks)
     clearvars -except allBids allSesh allWire prevID dsFs su allSpks
     cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\data')
     bidsID          = allSpks(su).bidsID;
@@ -47,7 +47,7 @@ for su = [284:629 1:283] %1:length(allSpks)
     sameSesh        = find(sameSesh);
         
     %% SKIP REPEATS
-    curID = [bidsID, sesh];
+    curID = [bidsID, regexprep(sesh, 'S1b', 'S1')];
     if strcmp(prevID, curID) % same patient + session
         continue
     else
@@ -55,7 +55,7 @@ for su = [284:629 1:283] %1:length(allSpks)
     end
     
     %% LFP
-    load(['\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\with spk int\',bidsID, '_', sesh, '_onlyMicroLFP_RAW_1000DS_SPKINT.mat'], 'data')
+    load(['\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\mySpkInt\',bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_mSPKint.mat'], 'data')
     chanLab = data.label';
     
 %     % GET OUT LINENOISE
@@ -85,7 +85,7 @@ for su = [284:629 1:283] %1:length(allSpks)
     seshDate = seshDate.name;
     seshFold = cd;
     
-    abc = dir('P*LogFile_EMtask.txt'); if size(abc,1)>1; error('too many logfiles!'); end
+    abc = dir('*LogFile_EMtask.txt'); if size(abc,1)>1; error('too many logfiles!'); end
     [trlENC, trlRET, rtENC, ~, missIdx, hitIdx] = loadLogsSimon([abc.folder, filesep, abc.name]);
     RTs = rtENC;
     trlSel = [trlENC'; trlRET'];
@@ -148,7 +148,7 @@ for su = [284:629 1:283] %1:length(allSpks)
             %% IF SPIKETIMES ARE NOT CORRECT IT IS PROBABLY IN detect_newSR
             if ~isequal(par.sr, sr) | ~isequal(numSpksVar, numSpks)
                 cd('..\detect_newSR2');
-                abc = dir(['times_*', wirename, '.mat']);
+                abc = dir(['times_*', wirename,'_' posNeg, '.mat']);
                 if size(abc,1)>1; error('Naming conflict before loading file'); end
                 load(abc.name, 'spikes', 'cluster_class', 'par', 'inspk')
                 
