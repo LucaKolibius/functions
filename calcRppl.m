@@ -1,20 +1,13 @@
-function [rpplsWire, rpplLen, bndLab] = calcRppl (data)
-
+function [ripple, bndLab] = calcRppl (data)
+oldDenMax = 0;
 chanLen   = cell2mat(cellfun(@length, [data.time], 'un', 0)) / 1000; % timepoint length divided by sampling freq gives channellength in seconds
-% rppl_exp  =  chanLen * (0.023 + 0.00545);           % number of ripples in white noise of same length
-rppl_exp = 0;
+
+%% expected number of ripples
+rppl_exp  =  sum(chanLen) * (0.023 + 0.00545);           % number of ripples in white noise of same length
 
 % NAMES OF THE BUNDLES
 bndLab = unique(cellfun(@(x) x(1:end-1),  data.label, 'un', 0));
 
-
-
-% rpplsWire = cell.empty(size(data.trial,2), 0);
-rpplLen   = cell(1,size(data.trial,2));
-rpplsWire = cell(1,size(data.trial,2));
-for trl = 1 : length(rpplsWire)
-    rpplsWire{trl} = zeros(1,size(data.trial{trl},2)); % gets overwritten later for no ripples
-end
 
 for bund = 1 : size(bndLab,1) % currently 1!
     curBund = cellfun(@(x) regexp(x,bndLab(bund)), {data.label}, 'un', 0);
@@ -41,6 +34,16 @@ for bund = 1 : size(bndLab,1) % currently 1!
         
         % run ripple detection on all wires
         outRipple = Slythm_DetectSpindles_v2(tfg, curData);
+        
+        %% PREALLOCATE
+        numRip = [];
+        
+        rpplLen   = cell(1,size(data.trial,2));
+        
+        rpplsWire = cell(1,size(data.trial,2));
+        for trl = 1 : length(rpplsWire)
+            rpplsWire{trl} = zeros(1,size(data.trial{trl},2));
+        end
         
         for trl = 1:size(curData.trial,2)
             
@@ -69,12 +72,22 @@ for bund = 1 : size(bndLab,1) % currently 1!
                     rpplsWire{trl}(rppls(rp,1) : rppls(rp,2)) = 1;
                 end
             else
-                rpplsWire{trl} = []; % no ripples in this trial
+%                 rpplsWire{trl} = []; % no ripples in this trial
             end
             
             
         end % END OF TRIAL
         
+        %% WHICH MW HAS THE HIGHEST RIPPLE MAXIMUM -> RIPPLE INPUT
+        rpplDenMax      = mean([rpplsWire{:}]);
+        
+        if rpplDenMax > oldDenMax
+            ripple.number  = numRip;
+            ripple.length  = rpplLen;
+            ripple.density = rpplsWire;
+            
+            oldDenMax = rpplDenMax;
+        end
         
     end % END OF MW
 end % END OF BUNDLE

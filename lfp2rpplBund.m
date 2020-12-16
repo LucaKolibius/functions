@@ -1,5 +1,6 @@
 %% NEW VERSION FOR MICRO LFP WITHOUT SPKINT THAT ONLY CONSIDERES BUNDLES IN WHICH I HAVE HIPPOCAMPAL UNITS
 clear
+whereAmI(1)
 global prePath;
 addpath([prePath, 'Luca\functions']);
 addpath([prePath, 'Luca\toolboxes\fieldtrip-20200310']); ft_defaults;
@@ -20,18 +21,14 @@ for spk = 1 : length(allSpks)
         continue
     end
     
-    if isempty(allSpks(spk).favChan)
-        continue
-    end
-    
     %% GET: bidsID + sesh
     bidsID  = allSpks(spk).bidsID;
     sesh    = allSpks(spk).sesh;
     %     allBund = {allSpks.bundlename};
     curBund = allSpks(spk).bundlename;
     %     curWire = [curBund, num2str(allSpks(spk).favChan)];
-    favChan = allSpks(spk).favChan(45:50);
-    idxTrl  = allSpks(spk).idxTrlSing;     % WHICH TRIALS DOES THAT SU INDEX?
+%     favChan = allSpks(spk).favChan(45:50);
+%     idxTrl  = allSpks(spk).idxTrlSing;     % WHICH TRIALS DOES THAT SU INDEX?
     encTrig = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1 3])*1000);
     
     %% LOAD IN THE LFP-DATA
@@ -40,15 +37,20 @@ for spk = 1 : length(allSpks)
     load([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'], 'data');
     
     % LAPTOP AND NO SPK INT
-    %     abc = dir([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_*.mat']);
-    %     load([abc.folder, filesep, abc.name], 'data');
+%         abc = dir([lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_*.mat']);
+%         load([abc.folder, filesep, abc.name], 'data');
     
     %% REDEFINE TRIALS ACCORDING TO encTrig
+%     cfg          = [ ];
+%     cfg.trl      = [encTrig(:,1)-1000-100-200 encTrig(:,2)+100 zeros(size(encTrig,1))];
+%     microLFPlong = ft_redefinetrial(cfg, data);
+%     microLFPlong = rmfield(microLFPlong, 'trialinfo');
+    
     cfg          = [ ];
-    cfg.trl      = [encTrig(:,1)-1000-100-200 encTrig(:,2)+100 zeros(size(encTrig,1))];
+    cfg.trl      = [encTrig(:,1) encTrig(:,2) zeros(size(encTrig,1))];
     microLFP     = ft_redefinetrial(cfg, data);
     microLFP     = rmfield(microLFP, 'trialinfo');
-    
+
     %% DEMEAN & ORTHOGONALIZE
     cfg        = [];
     cfg.demean = 'yes';
@@ -60,30 +62,32 @@ for spk = 1 : length(allSpks)
     %     cfg.channel  = curWire;
     %     microLFP     = ft_selectdata(cfg, microLFP); % select
     
-    %% THIS CHANNEL SELECTION COULD BE A DIFFERENT WIRE FOR EACH FREQUENCY
-    allBund = cellfun(@(x) x(1:end-1), microLFP.label, 'un', 0);
-    bundIdx = strcmp(allBund, curBund);
+    %% CHANNEL SELECTION COULD BE A DIFFERENT WIRE FOR EACH FREQUENCY
+%     allBund = cellfun(@(x) x(1:end-1), microLFP.label, 'un', 0);
+%     bundIdx = strcmp(allBund, curBund);
+%     
+%     cfg         = [];
+%     cfg.channel = microLFP.label(bundIdx);
+%     microLFP    = ft_selectdata(cfg, microLFP);
+
+        %% DETECT RIPPLES
+        [ripple, bndLab] = calcRppl (microLFP);
+        allSpks(spk).rpplNum = ripple.number;
+        allSpks(spk).rpplLen = ripple.length;
+        allSpks(spk).rpplDen = ripple.density;
+
+%     %% CALCULATE TRIAL RIPPLE POWER (80-140hz)
+%     [idxTrlPow, ndxTrlPow, goodTrl, freqRes] = calcRipplPow (microLFP, idxTrl, encTrig, favChan);
+%     
+%     if sum(idxTrl(logical(goodTrl))) > 0
+%         
+%         allSUPow.idx  = [ allSUPow.idx  {idxTrlPow}  ];
+%         allSUPow.ndx  = [ allSUPow.ndx  {ndxTrlPow}  ];
+%         
+%     end
     
-    cfg         = [];
-    cfg.channel = microLFP.label(bundIdx);
-    microLFP    = ft_selectdata(cfg, microLFP);
-    %     %% DETECT RIPPLES
-    %     [rpplsWire, rpplLen, bndLab] = calcRppl (microLFP);
-    %     allSpks(spk).rppls   = rpplsWire;
-    %     allSpks(spk).rpplLen = rpplLen;
-    
-    %% CALCULATE TRIAL RIPPLE POWER (80-140hz)
-    [idxTrlPow, ndxTrlPow, goodTrl, freqRes] = calcRipplPow (microLFP, idxTrl, encTrig, favChan);
-    
-    if sum(idxTrl(logical(goodTrl))) > 0
-        
-        allSUPow.idx  = [ allSUPow.idx  {idxTrlPow}  ];
-        allSUPow.ndx  = [ allSUPow.ndx  {ndxTrlPow}  ];
-        
-    end
-    
-    allFreqRes = [allFreqRes; freqRes];
+%     allFreqRes = [allFreqRes; freqRes];
 end
-% save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_rppls.mat', 'allSpks');
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_rppls.mat', 'allSpks');
 
 save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\rpplPowDiff_orthDeMea.mat', 'allSUPow', 'allFreqRes')
