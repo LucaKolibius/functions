@@ -1,6 +1,6 @@
 %% NEW VERSION FOR MICRO LFP WITHOUT SPKINT THAT ONLY CONSIDERES BUNDLES IN WHICH I HAVE HIPPOCAMPAL UNITS
 clear
-whereAmI(1)
+whereAmI(0)
 global prePath;
 addpath([prePath, 'Luca\functions']);
 addpath([prePath, 'Luca\toolboxes\fieldtrip-20200310']); ft_defaults;
@@ -90,4 +90,4 @@ for spk = 1 : length(allSpks)
 end
 save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_rppls.mat', 'allSpks');
 
-save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\rpplPowDiff_orthDeMea.mat', 'allSUPow', 'allFreqRes')
+% save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\rpplPowDiff_orthDeMea.mat', 'allSUPow', 'allFreqRes')

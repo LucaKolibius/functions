@@ -20,7 +20,7 @@ allWire  = {allSpks.wirename};
 
 prevID = [];
 dsFs    = 1000;
-for su = [491:629 1:283] %[284:629 1:283] %1:length(allSpks)
+for su = [284:625 1:283] %1:length(allSpks)
     clearvars -except allBids allSesh allWire prevID dsFs su allSpks
     cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\data')
     bidsID          = allSpks(su).bidsID;
@@ -55,7 +55,7 @@ for su = [491:629 1:283] %[284:629 1:283] %1:length(allSpks)
     end
     
     %% LFP
-    load(['\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\mySpkInt\',bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_mSPKint.mat'], 'data')
+    load(['\\analyse4.psy.gla.ac.uk\project0309\Luca\data\microLFP\with spk int\',bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_SPKINT.mat'], 'data')
     chanLab = data.label';
     
 %     % GET OUT LINENOISE

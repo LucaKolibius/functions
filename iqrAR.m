@@ -99,7 +99,7 @@ for chan = 1 : numChan
     isAR(chan,:) = artIdx;
     
 end
-isAR = repmat(isAR, 1, 1, 50);
+isAR = repmat(isAR, 1, 1, 100);
 isAR = permute(isAR, [1 3 2]);
 isAR = logical(isAR);
 end % END OF FUNCTION
