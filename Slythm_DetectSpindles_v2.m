@@ -631,9 +631,24 @@ if cfg.doFalseposRjct
             tmpTime = arrayfun(@(x) nearest(tmpTFR.time,x),cfg.falseposRjct.avgWin);
             tmpFreq = arrayfun(@(x) nearest(tmpTFR.freq,x),cfg.falseposRjct.freqlim);
             
-            %--- Perform event rejection
+            %--- Perform event rejection  
+            % @ LDK this creates a problem when there is only one ripple
+            % event. tmpPow is a 3D evt x freq x time variable when evt > 1
+            % if evt == 1 then tmpPow is a freq x time variable which
+            % allocates 36 (freq) events
+            
+            % OLD
             cfg.falseposRjct.rejects{jCh,iTrl} = ones(size(tmpPow,1),1,'logical');
             
+            % NEW
+            switch ndims(tmpPow)
+                case 3
+                    cfg.falseposRjct.rejects{jCh,iTrl} = ones(size(tmpPow,1),1,'logical');
+                case 2
+                    cfg.falseposRjct.rejects{jCh,iTrl} = ones(1,1,'logical');
+            end
+            
+
             switch ndims(tmpPow) % @LDK
                 case 3 % rip x freq x time
                     tmpPow = squeeze(sum(tmpPow(:,:,tmpTime(1):tmpTime(2)),3));     %% previous part
