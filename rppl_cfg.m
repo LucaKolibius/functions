@@ -10,7 +10,8 @@ tfg             = [];
 tfg.thresCh     = data.label(1);
 tfg.detectCh    = data.label(1);
 
-tfg.param.bpfreq    = [80 120]; %lower and upper limit for bandpass filter
+% tfg.param.bpfreq    = [80 120]; %lower and upper limit for bandpass filter % OLD
+ tfg.param.bpfreq    = [80 140];
 tfg.param.stageoi   = 1;
 tfg.param.artfctPad = [-0.25 0.25]; %[prePad, postPad] (in s) additional padding around each
                                     % artifact, negative values = pre-artifact padding (default = [0 0])

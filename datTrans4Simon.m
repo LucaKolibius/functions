@@ -1,3 +1,4 @@
+function datTrans4Simon
 %cd('\\analyse4\Project0310\iEEG_DATA\MICRO\P07\fVSpEM\2017-05-06_19-13-42')
 %cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\4simon2\P07\fVSpEM\2017-05-06_19-13-42')
 %% Spike Daten segmentiert (-7 bis 7 Sekunden um Cue Onset).
@@ -191,6 +192,9 @@ for su = [284:625 1:283] %1:length(allSpks)
         end
         
         wvf = reSort(3:end,:)';
+        allCl = reSort(2,:);
+        allSpkTms = reSort(1,:);
+        
         sortedSpikesSEG{1,chan}=struct('newSpikeTimes',allSpkTms,'assignedCluster',allCl,'wavf',wvf,...
             'num_clus',length(sameWireSpks) ,'SD',[],'SpikeTimesSeg',allNewSpks(1,:), 'trl',allNewSpks(3,:),'assignedClusterSeg',allNewSpks(2,:));
         
@@ -203,4 +207,6 @@ for su = [284:625 1:283] %1:length(allSpks)
     save([savepath, sbj, '_fVSpEM_',seshDate,'_spkDataStimLockedSegmented.mat'], 'Fs', 'RTs', 'chanLab', 'hitIdx', 'missIdx', 'sortedSpikesSEG', 'trlENC', 'trlRET', 'trlSel', 'wltCoeffs')
     save([savepath, sbj, '_fVSpEM_',seshDate,'_lfpDataStimLockedSegmenteddownsampled.mat'], 'LFPseg', 'RTs', 'chanLab', 'dsFs', 'dsTrlTime', 'hitIdx', 'missIdx', 'trlENC', 'trlRET', 'trlSel')
 end
-cd(savepath)
+cd(savepath) %% WILL PRODUCE AN ERROR FOR THE LAST SU IF IT IS SKIPPED
+
+end % OF FUNCTION

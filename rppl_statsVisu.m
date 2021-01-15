@@ -17,14 +17,14 @@ tw = 0; % :1:3 % only whole trial
 for su = 1 : length(allSpks)
     
     disp(su)
-    if any(isnan(allSpks(su).idxTrlSing))
+    if any(isnan(allSpks(su).idxTrlSingHi))
         continue
     end
     
     bidsID     = allSpks(su).bidsID;
     sesh       = allSpks(su).sesh;
     bundlename = allSpks(su).bundlename;
-    idxTrl     = allSpks(su).idxTrlSing; % INDEXED TRIALS
+    idxTrl     = allSpks(su).idxTrlSingHi; % INDEXED TRIALS
     
     % DEFINE TIME WINDOW
     encTrig = allSpks(su).encTrigger(allSpks(su).hitsIdx, [1, 3]);

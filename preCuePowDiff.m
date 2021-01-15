@@ -1,5 +1,7 @@
 function preCuePowDiff
+whereAmI(0);
 global prePath;
+
 
 lfpDir = dir([prePath, 'Luca\data\microLFP\sub-*_onlyMicroLFP_RAW_1000DS_*.mat']);  % spkInt in laptop and noSpkInt on local
 load([prePath, 'Luca\data\allSbj\allSpksHZ.mat'], 'allSpks')
@@ -89,6 +91,10 @@ for spk = 1 : length(allSpks)
         freqResLow    = trlPowLow.freq;
         trlPowLow     = squeeze(trlPowLow.powspctrm);
         
+        %% Cut Wings
+        trlPowLow(:,1:3000)        = [];
+        trlPowLow(:,end-2999:end)  = [];
+        
         %% AR
         [isAR,~]             = iqrAR(microLFP.trial{trl},0);
         isARLow              = squeeze(isAR(favChanLo,1:length(freqResLow),:));
@@ -104,9 +110,6 @@ for spk = 1 : length(allSpks)
         %         end
         %         trlPow             = temp;
         
-        %% Cut Wings
-        trlPowLow(:,1:3000)        = [];
-        trlPowLow(:,end-2999:end)  = [];
         
         %            %% NORMALIZE TF PLOT USING BASELINE (OLD, STANDARDIZE OVER TRIALS NOW)
         %     baseline = trlPow(:,1:500);
@@ -144,6 +147,10 @@ for spk = 1 : length(allSpks)
         freqResHigh   = trlPowHigh.freq;
         trlPowHigh    = squeeze(trlPowHigh.powspctrm);
         
+        %% Cut Wings
+        trlPowHigh(:,1:3000)       = [];
+        trlPowHigh(:,end-2999:end) = [];
+        
         %% AR
         [isAR,~]             = iqrAR(microLFP.trial{trl},0);
         isARHigh             = squeeze(isAR(favChanHi,1:length(freqResHigh),:));
@@ -159,9 +166,6 @@ for spk = 1 : length(allSpks)
         %         end
         %         trlPow             = temp;
         
-        %% Cut Wings
-        trlPowHigh(:,1:3000)       = [];
-        trlPowHigh(:,end-2999:end) = [];
         
         %            %% NORMALIZE TF PLOT USING BASELINE (OLD, STANDARDIZE OVER TRIALS NOW)
         %     baseline = trlPow(:,1:500);
@@ -214,6 +218,6 @@ end % END OF SU LOOP
 
 
 % freqRes = trlPow.freq;
-save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\preCuePowDiff_orthDeMea.mat', 'allSUPowLow', 'allSUPowHigh')
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\preCuePowDiff.mat', 'allSUPowLow', 'allSUPowHigh')
 
 end % END OF FUNCTION
