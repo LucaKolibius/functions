@@ -26,12 +26,13 @@ for spk = 1 : length(allSpks)
     favChanLo = allSpks(spk).favChanLow;
     idxTrlLw  = allSpks(spk).idxTrlSingLw;
     idxTrlHi  = allSpks(spk).idxTrlSingHi;
-    encTrig   = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1])*1000);
+    encTrig   = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1 3])*1000);
     bund      = allSpks(spk).bundlename;
     
     %% LOAD IN THE LFP-DATA
     newLFP = [lfpDir(1).folder, filesep, bidsID, '_', regexprep(sesh, 'S1b', 'S1'), '_onlyMicroLFP_RAW_1000DS_noSPKINT.mat'];
     if ~strcmp(newLFP, prevLFP)
+        clear data
         load(newLFP, 'data');
         prevLFP = newLFP;
     end
@@ -195,9 +196,6 @@ lineLength = fprintf('%d spikes out of %d spikes done (%.2f%%).\n', spk, length(
 lineLength = fprintf('%d spikes out of %d spikes done (%.2f%%).\n', spk, length(allSpks), spk/length(allSpks)*100);
 lineLength = fprintf('%d spikes out of %d spikes done (%.2f%%).\n', spk, length(allSpks), spk/length(allSpks)*100);
 lineLength = fprintf('%d spikes out of %d spikes done (%.2f%%).\n', spk, length(allSpks), spk/length(allSpks)*100);
-
-% save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\TFtoi3.mat',
-% 'allSpks', '-v7.3'); % slows down too much!!
 
 end % END OF SU LOOP
 
