@@ -25,6 +25,18 @@ preCuePowDiff_perm % statistics on it
 spkRppl_ppc
 spkPhase_encRet % favChan
 
+TW = [1000 5000]; % 1s before and 5s after
+trigCode = [1]; % cue-locked
+TFtoi3(trigCode, TW); %% TIME FREQUENCY ANALYSIS
+
+TW = [5000 1000]; % 5s before and 1s after
+trigCode = [3]; % resp-locked
+TFtoi3(trigCode, TW);
+
+TW = [1000 1000]; % 1s before and 1s after
+trigCode = [1 3]; % cue- & resp-locked
+TFtoi3(trigCode, TW);
+
 %%
 % compare micro LFP of precue period (-1:0) for indexed and non-indexed
 % trials

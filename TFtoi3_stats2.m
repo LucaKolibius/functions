@@ -1,13 +1,7 @@
+%% Here I z-score first and then take the difference
 %% WITHIN TRIAL
 load('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\TF_preCue.mat', 'allSpks');
 clearvars -except allSpks
-% powLowDiff    = [];
-% powLowComp    = [];
-% powLowCompIdx = [];
-% 
-% powHighDiff    = [];
-% powHiComp    = [];
-% powHiCompIdx = [];
 
 % PREALLOCATE
 % LOW
@@ -35,45 +29,29 @@ for su = 1 : length(allSpks)
             % SAVE STUFF FOR PERMUTATION TEST
             idxNum    = sum(allSpks(su).idxTrlSingLw);
             powLow    = cat(3, allSpks(su).allPowLow(:,:,idxTrlLw), allSpks(su).allPowLow(:,:, ~idxTrlLw));
-
-            %% (1) FIRST DIFF THEN ZSCORE
+            
+            %% zscore with all trials as BL
+            powLowBase = squeeze(nanmean(powLow,2)); % first collapse over time
+            baseMean   = mean(powLowBase,2);  %mean over trials; this is the mean for each frequency
+            baseStd    = std(powLowBase,0,2);
+            
+            % ZSCORING
+            for trl = 1:size(powLow,3)
+                powLow(:,:,trl) = (powLow(:,:,trl)-baseMean)./baseStd;
+            end
+            
+            powLowIdx = powLow(:,:,1:idxNum);
+            powLowNdx = powLow(:,:,idxNum+1:end);
+            
+            %% TAKE DIFFERENCE
             % TF of difference (ABSOLUTE OR RELATIVE)
             switch subsRel
                 case 0
-                    diffTF = nanmean(allSpks(su).allPowLow(:,:,idxTrlLw),3) - nanmean(allSpks(su).allPowLow(:,:, ~idxTrlLw),3);
+                    diffTF = squeeze(nanmean(powLowIdx,3)) - squeeze(nanmean(powLowNdx,3));
                 case 1
-                    diffTF = nanmean(allSpks(su).allPowLow(:,:,idxTrlLw),3) ./ manmean(allSpks(su).allPowLow(:,:, ~idxTrlLw),3);
+                    diffTF = squeeze(nanmean(powLowIdx,3)) ./ squeeze(nanmean(powLowNdx,3));
             end
                         
-            % z transform
-            for freq = 1:size(diffTF,1)
-                avg            = mean(diffTF(freq,:),2);
-                mStdev         = std(diffTF(freq,:),0,2);
-                diffTF(freq,:) = (diffTF(freq,:)-avg)/mStdev;
-            end
-            
-            %% THIS CONFUSES ME
-%             %% (2) FIRST ZSCORE THEN DIFF 
-%             %             idx = allSpks(su).allPowLow(:,:,  idxTrlLw);
-%             %             ndx = allSpks(su).allPowLow(:,:, ~idxTrlLw);
-%             allPowLow = randn(45,1000,40);
-%             allPowLowMean = squeeze(mean(allPowLow,3));
-%             
-%             mMean = mean(allPowLowMean,2);
-%             mStd  = std(allPowLowMean,0,2);
-% 
-%             for trl = 1:40
-%                 for freq = 1:45
-%                     allPowLow(freq,:,trl) = (allPowLow(freq,:,trl) - mMean(freq)) /mStd(freq);
-%                 end
-%             end
-            
-            %             % DB NORMALIZE ALL TRIALS IN REGARDS TO THENSELF
-            %             for trl = 1:size(powLowAll,3)
-            %                 for freq = 1:size(powLowAll,1)
-            %                     powLowAll(freq,:, trl) = 10*log10(powLowAll(freq,:, trl)./squeeze(nanmean(powLowAll(freq,:, trl),2)));
-            %                 end
-            %             end
             
             diffTFlow_all = [diffTFlow_all {diffTF}];
             idxNumLow_all = [idxNumLow_all, idxNum];
@@ -90,19 +68,26 @@ for su = 1 : length(allSpks)
             idxNum    = sum(allSpks(su).idxTrlSingHi);
             powHigh    = cat(3, allSpks(su).allPowHigh(:,:,idxTrlHi), allSpks(su).allPowHigh(:,:, ~idxTrlHi));
 
-            % USE ABSOLUTE OR RELATIVE DIFFERENCE BETWEEN TF
-            switch subsRel
-                case 0
-                    diffTF = nanmean(allSpks(su).allPowHigh(:,:,idxTrlHi),3) - nanmean(allSpks(su).allPowHigh(:,:, ~idxTrlHi),3);
-                case 1
-                    diffTF = nanmean(allSpks(su).allPowHigh(:,:,idxTrlHi),3) ./ nanmean(allSpks(su).allPowHigh(:,:, ~idxTrlHi),3);
+                       %% zscore with all trials as BL
+            powHighBase = squeeze(nanmean(powHigh,2)); % first collapse over time
+            baseMean   = mean(powHighBase,2);  %mean over trials; this is the mean for each frequency
+            baseStd    = std(powHighBase,0,2);
+            
+            % ZSCORING
+            for trl = 1:size(powHigh,3)
+                powHigh(:,:,trl) = (powHigh(:,:,trl)-baseMean)./baseStd;
             end
             
-            % z transform
-            for freq = 1:size(diffTF,1)
-                avg            = mean(diffTF(freq,:),2);
-                mStdev         = std(diffTF(freq,:),0,2);
-                diffTF(freq,:) = (diffTF(freq,:)-avg)/mStdev;
+            powHighIdx = powHigh(:,:,1:idxNum);
+            powHighNdx = powHigh(:,:,idxNum+1:end);
+            
+            %% TAKE DIFFERENCE
+            % TF of difference (ABSOLUTE OR RELATIVE)
+            switch subsRel
+                case 0
+                    diffTF = squeeze(nanmean(powHighIdx,3)) - squeeze(nanmean(powHighNdx,3));
+                case 1
+                    diffTF = squeeze(nanmean(powHighIdx,3)) ./ squeeze(nanmean(powHighNdx,3));
             end
             
             diffTFhigh_all = [diffTFhigh_all, {diffTF}];
@@ -143,13 +128,6 @@ for perm = 1:nperm
                 diffTFperm = squeeze(nanmean(seshTF(:,:,1:numIdx),3) - nanmean(seshTF(:,:, numIdx+1:end),3));
             case 1
                 diffTFperm = squeeze(nanmean(seshTF(:,:,1:numIdx),3)) ./ squeeze(mammean(seshTF(:,:, numIdx+1:end),3));
-        end
-        
-        % z transform
-        for freq = 1:size(diffTFperm,1)
-            avg                = nanmean(diffTFperm(freq,:),2);
-            mStdev             = nanstd(diffTFperm(freq,:),0,2);
-            diffTFperm(freq,:) = (diffTFperm(freq,:)-avg)/mStdev;
         end
         
         diffTFperm_comp(:,:,comp) = diffTFperm;        

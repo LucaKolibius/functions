@@ -3,13 +3,13 @@
 filtEEG = microLFP;
 for trl = 1:size(microLFP.trial,2)
     for chan = 1:8
-        filtEEG.trial{trl}(chan,:) = ft_preproc_bandpassfilter(filtEEG.trial{trl}(chan,:), 1000, [80 120], 3*fix(1000/80)+1, 'fir', 'twopass');
+        filtEEG.trial{trl}(chan,:) = ft_preproc_bandpassfilter(filtEEG.trial{trl}(chan,:), 1000, [80 140], 3*fix(1000/80)+1, 'fir', 'twopass');
     end
 end
 
 counter = 0;
-for trl = 10%1:size(microLFP.trial,2)
-    for rip = 32%1:size(staEnd{trl,1},2)
+for trl = 1:size(microLFP.trial,2)
+    for rip = 1:size(staEnd{trl,1},2)
         counter = counter + 1;
         
         if counter ~= 32
@@ -27,13 +27,13 @@ for trl = 10%1:size(microLFP.trial,2)
         
         subplot(211); hold on
         eeg = microLFP.trial{trl}(favChan,mStart:mEnd);
-%         eeg(1:50) = linspace(-15,-13,50)
-%         eeg(end-49:end) = linspace(-10,-15,50)
-eeg(1:50) = -12.5;
-eeg(end-49:end) = -12.5;
+eeg(1:50) = 5;
+eeg(end-49:end) = 5;
+        eeg(104) = 5;
+
         plot(eeg);
-                ylim([-25 0])
-        xlim([40 140])
+                ylim([-5 15])
+        xlim([40 length(eeg)-40])
 xticks('')
 ylabel('\muV')
         plot([50 50], get(gca, 'YLim'), 'r--', 'linew', 2)
@@ -48,12 +48,13 @@ handl.FontSize = 16;
         eegF = filtEEG.trial{trl}(favChan,mStart:mEnd);
         eegF(1:50) = 0;
         eegF(end-49:end) = 0;
+        eegF(104) = 0;
 ylabel('\muV')
 xlabel('Time (ms)')
         plot(eegF);
 %         sgtitle(['Trial: ', num2str(trl), 'ripple# ', num2str(rip)]);
-        xlim([40 140])
-title('EEG activity between 80 and 120 Hz')
+        xlim([40 length(eegF)-40])
+title('EEG activity between 80 and 140 Hz')
 handl = gca;
 handl.FontWeight = 'bold';
 handl.FontSize = 16;
@@ -61,7 +62,7 @@ handl.FontSize = 16;
         plot([length(eeg)-50 length(eeg)-50], get(gca, 'YLim'), 'r--', 'linew', 2)
 
 
-        saveas(gcf, ['\\analyse4.psy.gla.ac.uk\project0309\Luca\SFN2020\ripple_example\ripplExample', '_counter',num2str(counter)], 'emf'); % emf
+        saveas(gcf, ['\\analyse4.psy.gla.ac.uk\project0309\Luca\SFN2020\ripple_example\ripplExample', '_counter',num2str(counter)], 'png'); % emf
         
     end
 end

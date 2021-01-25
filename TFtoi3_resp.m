@@ -1,3 +1,4 @@
+%% USE TFtoi3 INSTEAD AND ADAPT THE TRIGGER
 function TFtoi3_resp
 whereAmI(0);
 global prePath;
@@ -11,7 +12,7 @@ allSUPowHigh.idx  = [];
 allSUPowHigh.ndx  = [];
 
 for spk = 1 : length(allSpks)
-    
+    try
     %     if any(isnan(allSpks(spk).idxTrlSing))
     %         continue
     %     end
@@ -192,11 +193,15 @@ lineLength = fprintf('%d spikes out of %d spikes done (%.2f%%).', spk, length(al
 lineLength = fprintf('%d spikes out of %d spikes done (%.2f%%).', spk, length(allSpks), spk/length(allSpks)*100);
 
 %     fprintf(repmat('\b',1,lineLength))
+    
+catch
+        save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\TFtoi3_respLocked_partial.mat', 'allSpks', '-v7.3')
+    end
 
 end % END OF SU LOOP
 
 
 % freqRes = trlPow.freq;
-save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\TFtoi3_resp.mat', 'allSpks', '-v7.3')
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\TFtoi3_respLocked.mat', 'allSpks', '-v7.3')
 
 end % END OF FUNCTION

@@ -3,7 +3,8 @@
 whereAmI(0);
 global prePath;
 
-load([prePath, 'Luca\data\allSbj\allSpksHZ_rppls.mat'], 'allSpks')
+% load([prePath, 'Luca\data\allSbj\allSpksHZ_rppls.mat'], 'allSpks')
+load([prePath, 'Luca\data\allSbj\allSpksHZ_rppls80to140.mat'], 'allSpks')
 allBids = {allSpks.bidsID};
 allBund = {allSpks.bundlename};
 allSesh = {allSpks.sesh};
