@@ -19,7 +19,7 @@ allPhsDat.encNdx = [];
 allPhsDat.encIdx = [];
 allPhsDat.retNdx = [];
 allPhsDat.retIdx = [];
-for su = 1: 4%size(allSpks,2)
+for su = 1: size(allSpks,2)
     if allSpks(su).iu == 0
         continue
     end

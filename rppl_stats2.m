@@ -58,30 +58,61 @@ for spk = 1 : length(allSpks)
     
 end % OF SU LOOP
 
-%%
-%% (2) WITHIN DIFFERENCE
+%% VISUALIZE RIPPLE DENSITY
+figure('units','normalized','outerposition',[0 0 1 1]);
+subplot(20,1,[4:20])
+
+[p, ~] = ranksum(idxDen, ndxDen, 'tail', 'right');
+[p_perm] = perm_ranksum(idxLen', ndxLen');
+title({sprintf('Density of Ripples (p_{ranksum} = %.2f | p_(perm) = %.2f)', p, p_perm), ...
+    sprintf('Indexed Trials (#% d; M = %.2f; MED = %.2f)', length(idxDen), mean(idxDen), median(idxDen)), ...
+    sprintf('Non-Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(ndxDen), mean(ndxDen), median(ndxDen))});
+hold on
+
+hand1 = histogram(idxDen, 0:0.0025:0.1, 'Normalization','probability');
+hand2 = histogram(ndxDen, 0:0.0025:0.1, 'Normalization','probability');
+hand2.FaceColor = [1,0,0];
+
+% plot([mean(idxDen) mean(idxDen)], get(gca, 'YLim'), 'color', 'b', 'linew', 2, 'linestyle', '-');
+% plot([mean(idxDen) mean(idxDen)], get(gca, 'YLim'), 'color', 'b', 'linew', 2, 'linestyle', '-');
+% plot([mean(ndxDen) mean(ndxDen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 2, 'linestyle', '-');
+% 
+% plot([median(idxDen) median(idxDen)], get(gca, 'YLim'), 'color', 'b',     'linew', 2, 'linestyle', '--');
+% plot([median(ndxDen) median(ndxDen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 2, 'linestyle', '--');
+
+title(sprintf('Density of Ripples (p_{ranksum}) = %.2f', p))
+yticks([0:0.05:0.2])
+ylim([0 0.2])
+legHand = legend('Indexed', 'Non-Indexed');
+legHand.FontSize = 16;
+legHand.FontWeight = 'bold';
+xlabel('Density')
+ylabel('Proportion');
+
+figHand = gca;
+figHand.FontSize = 16;
+figHand.FontWeight = 'bold';
+
+
+%% VISUALIZE RIPPLE TIMINGS
+clear
+
 whereAmI(0);
 global prePath;
 
-load([prePath, 'Luca\data\allSbj\allSpksHZ_rppls.mat'], 'allSpks')
-allBids = {allSpks.bidsID};
-allBund = {allSpks.bundlename};
-allSesh = {allSpks.sesh};
+load([prePath, 'Luca\data\allSbj\rpplDens_time.mat'], 'allSpks')
+allBids     = {allSpks.bidsID};
+allBund     = {allSpks.bundlename};
+allSesh     = {allSpks.sesh};
+skpSpk      = zeros(1,length(allSpks));
 
-rpplNum.idx = [];
-rpplNum.ndx = [];
-rpplLen.idx = [];
-rpplLen.ndx = [];
-rpplDen.idx = [];
-rpplDen.ndx = [];
+rpplTms_idx = [];
+rpplTms_ndx = [];
 
-skpSpk = zeros(1,length(allSpks));
 for spk = 1 : length(allSpks)
-    trlDur = [allSpks(spk).encTrigger(allSpks(spk).hitsIdx,3) - allSpks(spk).encTrigger(allSpks(spk).hitsIdx,1)]';
     
-    allSpks(spk).rpplNum =     allSpks(spk).rpplNum ./trlDur;
-
-    %% SKIP SPIKES ON THE SAME BUNLDE
+    
+    %% SKIP SPIKE
     if skpSpk(spk) == 1
         continue
     end
@@ -94,26 +125,88 @@ for spk = 1 : length(allSpks)
     skpSpk(sameIdx) = 1;
     idxTrl  = any(vertcat(allSpks(sameIdx).idxTrl),1); % any trial that is indexed on that bundle
     
-    %% IF ANY TRIALS IN THAT BUNDLE ARE INDEXED
-    if any(idxTrl)
-        
-        %% RIPPLE NUMBER
-        rpplNum.idx  = [ rpplNum.idx  {allSpks(spk).rpplNum( idxTrl)}  ];
-        rpplNum.ndx  = [ rpplNum.ndx  {allSpks(spk).rpplNum(~idxTrl)}  ];
+    if sum(idxTrl) == 0
+        continue
+    end
+    
+    rpplTms_idx = [ rpplTms_idx; allSpks(spk).rpplTms( idxTrl) ];
+    rpplTms_ndx = [ rpplTms_ndx; allSpks(spk).rpplTms(~idxTrl) ];
 
-        %% RIPPLE LENGTH
-        rpplLen.idx  = [ rpplLen.idx  {allSpks(spk).rpplLen( idxTrl)}  ];
-        rpplLen.ndx  = [ rpplLen.ndx  {allSpks(spk).rpplLen(~idxTrl)}  ];
-
-        %% RIPPLE DENSITY
-        rpplDen.idx  = [rpplDen.idx {cell2mat(cellfun(@mean, {allSpks(spk).rpplDen{ idxTrl}}, 'un', 0))}];
-        rpplDen.ndx  = [rpplDen.ndx {cell2mat(cellfun(@mean, {allSpks(spk).rpplDen{~idxTrl}}, 'un', 0))}];
-        
-        
-    end % IF THERE ARE INDEXED TRIALS
 end % OF SU LOOP
 
+idxmean = mean(rpplTms_idx,1);
+ndxmean = mean(rpplTms_ndx,1);
 
+figure(2); clf; hold on;
+plot(idxmean, 'linew', 2.5, 'color', [0.1059, 0.6196, 0.4667]);
+plot(ndxmean, 'linew', 2.5, 'color', [0.4588, 0.4392, 0.7020]);
+xlabel('Time [ms]')
+ylabel('Ripple Density')
+title('Ripple Density Time-Resolved')
+legend({'Indexed trials', 'Non-indexed trials'})
+mAx            = gca;
+mAx.FontWeight = 'bold';
+mAx.FontSize   = 20;
+
+
+
+
+%%
+%% (2) WITHIN DIFFERENCE
+% whereAmI(0);
+% global prePath;
+% 
+% load([prePath, 'Luca\data\allSbj\allSpksHZ_rppls.mat'], 'allSpks')
+% allBids = {allSpks.bidsID};
+% allBund = {allSpks.bundlename};
+% allSesh = {allSpks.sesh};
+% 
+% rpplNum.idx = [];
+% rpplNum.ndx = [];
+% rpplLen.idx = [];
+% rpplLen.ndx = [];
+% rpplDen.idx = [];
+% rpplDen.ndx = [];
+% 
+% skpSpk = zeros(1,length(allSpks));
+% for spk = 1 : length(allSpks)
+%     trlDur = [allSpks(spk).encTrigger(allSpks(spk).hitsIdx,3) - allSpks(spk).encTrigger(allSpks(spk).hitsIdx,1)]';
+%     
+%     allSpks(spk).rpplNum =     allSpks(spk).rpplNum ./trlDur;
+% 
+%     %% SKIP SPIKES ON THE SAME BUNLDE
+%     if skpSpk(spk) == 1
+%         continue
+%     end
+%     
+%     %% GET: bidsID + sesh
+%     bidsID  = allSpks(spk).bidsID;
+%     sesh    = allSpks(spk).sesh;
+%     bund    = allSpks(spk).bundlename;
+%     sameIdx = strcmp(bidsID, allBids) & strcmp(sesh, allSesh) & strcmp(bund, allBund);
+%     skpSpk(sameIdx) = 1;
+%     idxTrl  = any(vertcat(allSpks(sameIdx).idxTrl),1); % any trial that is indexed on that bundle
+%     
+%     %% IF ANY TRIALS IN THAT BUNDLE ARE INDEXED
+%     if any(idxTrl)
+%         
+%         %% RIPPLE NUMBER
+%         rpplNum.idx  = [ rpplNum.idx  {allSpks(spk).rpplNum( idxTrl)}  ];
+%         rpplNum.ndx  = [ rpplNum.ndx  {allSpks(spk).rpplNum(~idxTrl)}  ];
+% 
+%         %% RIPPLE LENGTH
+%         rpplLen.idx  = [ rpplLen.idx  {allSpks(spk).rpplLen( idxTrl)}  ];
+%         rpplLen.ndx  = [ rpplLen.ndx  {allSpks(spk).rpplLen(~idxTrl)}  ];
+% 
+%         %% RIPPLE DENSITY
+%         rpplDen.idx  = [rpplDen.idx {cell2mat(cellfun(@mean, {allSpks(spk).rpplDen{ idxTrl}}, 'un', 0))}];
+%         rpplDen.ndx  = [rpplDen.ndx {cell2mat(cellfun(@mean, {allSpks(spk).rpplDen{~idxTrl}}, 'un', 0))}];
+%         
+%         
+%     end % IF THERE ARE INDEXED TRIALS
+% end % OF SU LOOP
+% 
+% 
 % %% EMPIRICAL DIFFERENCE
 % numComp = size(rpplDen.idx,2);
 % diffLen_emp = [];
@@ -264,39 +357,3 @@ end % OF SU LOOP
 % plot([nanmedian(idxLen) nanmedian(idxLen)], get(gca, 'YLim'), 'color', 'b',     'linew', 3, 'linestyle', '--');
 % plot([nanmedian(ndxLen) nanmedian(ndxLen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '--');
 % legend('Indexed', 'Non-Indexed')
-
-
-% VISUALIZE RIPPLE DENSITY
-figure('units','normalized','outerposition',[0 0 1 1]);
-subplot(20,1,[4:20])
-
-[p, ~] = ranksum(idxDen, ndxDen, 'tail', 'right');
-[p_perm] = perm_ranksum(idxLen', ndxLen');
-title({sprintf('Density of Ripples (p_{ranksum} = %.2f | p_(perm) = %.2f)', p, p_perm), ...
-    sprintf('Indexed Trials (#% d; M = %.2f; MED = %.2f)', length(idxDen), mean(idxDen), median(idxDen)), ...
-    sprintf('Non-Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(ndxDen), mean(ndxDen), median(ndxDen))});
-hold on
-
-hand1 = histogram(idxDen, 0:0.0025:0.1, 'Normalization','probability');
-hand2 = histogram(ndxDen, 0:0.0025:0.1, 'Normalization','probability');
-hand2.FaceColor = [1,0,0];
-
-% plot([mean(idxDen) mean(idxDen)], get(gca, 'YLim'), 'color', 'b', 'linew', 2, 'linestyle', '-');
-% plot([mean(idxDen) mean(idxDen)], get(gca, 'YLim'), 'color', 'b', 'linew', 2, 'linestyle', '-');
-% plot([mean(ndxDen) mean(ndxDen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 2, 'linestyle', '-');
-% 
-% plot([median(idxDen) median(idxDen)], get(gca, 'YLim'), 'color', 'b',     'linew', 2, 'linestyle', '--');
-% plot([median(ndxDen) median(ndxDen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 2, 'linestyle', '--');
-
-title(sprintf('Density of Ripples (p_{ranksum}) = %.2f', p))
-yticks([0:0.05:0.2])
-ylim([0 0.2])
-legHand = legend('Indexed', 'Non-Indexed');
-legHand.FontSize = 16;
-legHand.FontWeight = 'bold';
-xlabel('Density')
-ylabel('Proportion');
-
-figHand = gca;
-figHand.FontSize = 16;
-figHand.FontWeight = 'bold';

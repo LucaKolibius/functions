@@ -37,15 +37,14 @@ for su = 1: length(allSpks)
     
     %% SPIKES IN SECONDS
     clusterSpikes = allSpks(su).spks/1000;
-    spksSeg = insertSpiketimes2(trig, clusterSpikes, [1 1], [-1.375 10.375])'; % 3 seconds prior to cue trigger until 1 second after response trigger
+    spksSeg       = insertSpiketimes2(trig, clusterSpikes, [1 1], [-1.375 10.375])'; % 3 seconds prior to cue trigger until 1 second after response trigger
     
     allConv = [];
     for trl = 1 : length(trig)
         
         [x,~]                = histcounts(spksSeg{trl}, dt);
         spkConv              = conv(mKernel, x);
-        %         spkConv(1:375)       = [];
-        %         spkConv(end-374:end) = [];
+  
         spkConv(1:750)       = [];
         spkConv(end-749:end) = [];
         

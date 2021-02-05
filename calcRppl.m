@@ -1,4 +1,4 @@
-function [ripple, bndLab, staEnd, favChan] = calcRppl (data)
+function [ripple, bndLab, peaks, staEnd, favChan] = calcRppl (data)
 oldDenMax = 0;
 chanLen   = cell2mat(cellfun(@length, [data.time], 'un', 0)) / 1000; % timepoint length divided by sampling freq gives channellength in seconds
 
@@ -36,10 +36,11 @@ for bund = 1 : size(bndLab,1) % currently 1!
         outRipple = Slythm_DetectSpindles_v2(tfg, curData);
         
         try
-            %         staEndTemp = [{outRipple.evtIndiv.staTime}', {outRipple.evtIndiv.endTime}'];
-            staEndTemp = {outRipple.evtIndiv.maxTime}';
+            staEndTemp = [{outRipple.evtIndiv.staTime}', {outRipple.evtIndiv.endTime}'];
+            peakTemp   = {outRipple.evtIndiv.maxTime}';
         catch
             staEndTemp = [];
+            peakTemp   = [];
         end
         
         %% PREALLOCATE
@@ -88,7 +89,8 @@ for bund = 1 : size(bndLab,1) % currently 1!
         rpplDenMax      = mean([rpplsWire{:}]);
         
         if rpplDenMax > oldDenMax
-            staEnd = staEndTemp;
+            peaks   = peakTemp;
+            staEnd  = staEndTemp;
             favChan = mw;
             ripple.number  = numRip;
             ripple.length  = rpplLen;
