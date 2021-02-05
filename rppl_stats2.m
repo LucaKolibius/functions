@@ -19,9 +19,7 @@ idxLen = [];
 idxDen = [];
 
 for spk = 1 : length(allSpks)
-    if sum(allSpks(spk).idxTrl) == 0
-        continue
-    end
+   
     
     %% SKIP SPIKE
     if skpSpk(spk) == 1
@@ -35,6 +33,10 @@ for spk = 1 : length(allSpks)
     sameIdx = strcmp(bidsID, allBids) & strcmp(sesh, allSesh) & strcmp(bund, allBund);
     skpSpk(sameIdx) = 1;
     idxTrl  = any(vertcat(allSpks(sameIdx).idxTrl),1); % any trial that is indexed on that bundle
+ 
+    if sum(idxTrl) == 0
+        continue
+    end
     
     %     encTrig = round(allSpks(spk).encTrigger(allSpks(spk).hitsIdx,[1])*1000);
     
@@ -226,42 +228,42 @@ end % OF SU LOOP
 % mean(diffDen_emp)
 
 %% VISUALISATION
-figure('units','normalized','outerposition',[0 0 1 1]);
-
-% RIPPLE NUMBER
-subplot(211)
-[p, ~] = ranksum(idxNum, ndxNum, 'tail', 'right');
-[p_perm] = perm_ranksum(idxNum', ndxNum');
-title({sprintf('Number of Ripples (p_{ranksum} = %.2f | p_(perm) = %.2f)', p, p_perm), ...
-    sprintf('Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(idxNum), mean(idxNum), median(idxNum)), ...
-    sprintf('Non-Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(ndxNum), mean(ndxNum), median(ndxNum))});
-hold on
-hand1 = histogram(idxNum, 0:1:10, 'Normalization','probability');
-hand2 = histogram(ndxNum, 0:1:10, 'Normalization','probability');
-hand2.FaceColor = [1,0,0];
-plot([mean(idxNum) mean(idxNum)], get(gca, 'YLim'), 'color', 'b', 'linew', 4, 'linestyle', '-');
-plot([mean(ndxNum) mean(ndxNum)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '-');
-plot([median(idxNum) median(idxNum)], get(gca, 'YLim'), 'color', 'b',     'linew', 4, 'linestyle', '--');
-plot([median(ndxNum) median(ndxNum)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '--');
-legend('Indexed', 'Non-Indexed')
-
-% RIPPLE LENGTH
-subplot(212)
-[p, ~] = ranksum(idxLen, ndxLen, 'tail', 'right');
-[p_perm] = perm_ranksum(idxLen', ndxLen');
-title({sprintf('Length of Ripples (p_{ranksum} = %.2f | p_(perm) = %.2f)', p, p_perm), ...
-    sprintf('Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(idxLen), nanmean(idxLen), nanmedian(idxLen)), ...
-    sprintf('Non-Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(ndxLen), nanmean(ndxLen), nanmedian(ndxLen))});
-
-hold on
-hand1 = histogram(idxLen, 30:5:120, 'Normalization','probability');
-hand2 = histogram(ndxLen, 30:5:120, 'Normalization','probability');
-hand2.FaceColor = [1,0,0];
-plot([nanmean(idxLen) nanmean(idxLen)], get(gca, 'YLim'), 'color', 'b', 'linew', 4, 'linestyle', '-');
-plot([nanmean(ndxLen) nanmean(ndxLen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '-');
-plot([nanmedian(idxLen) nanmedian(idxLen)], get(gca, 'YLim'), 'color', 'b',     'linew', 3, 'linestyle', '--');
-plot([nanmedian(ndxLen) nanmedian(ndxLen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '--');
-legend('Indexed', 'Non-Indexed')
+% figure('units','normalized','outerposition',[0 0 1 1]);
+% 
+% % RIPPLE NUMBER
+% subplot(211)
+% [p, ~] = ranksum(idxNum, ndxNum, 'tail', 'right');
+% [p_perm] = perm_ranksum(idxNum', ndxNum');
+% title({sprintf('Number of Ripples (p_{ranksum} = %.2f | p_(perm) = %.2f)', p, p_perm), ...
+%     sprintf('Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(idxNum), mean(idxNum), median(idxNum)), ...
+%     sprintf('Non-Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(ndxNum), mean(ndxNum), median(ndxNum))});
+% hold on
+% hand1 = histogram(idxNum, 0:1:10, 'Normalization','probability');
+% hand2 = histogram(ndxNum, 0:1:10, 'Normalization','probability');
+% hand2.FaceColor = [1,0,0];
+% plot([mean(idxNum) mean(idxNum)], get(gca, 'YLim'), 'color', 'b', 'linew', 4, 'linestyle', '-');
+% plot([mean(ndxNum) mean(ndxNum)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '-');
+% plot([median(idxNum) median(idxNum)], get(gca, 'YLim'), 'color', 'b',     'linew', 4, 'linestyle', '--');
+% plot([median(ndxNum) median(ndxNum)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '--');
+% legend('Indexed', 'Non-Indexed')
+% 
+% % RIPPLE LENGTH
+% subplot(212)
+% [p, ~] = ranksum(idxLen, ndxLen, 'tail', 'right');
+% [p_perm] = perm_ranksum(idxLen', ndxLen');
+% title({sprintf('Length of Ripples (p_{ranksum} = %.2f | p_(perm) = %.2f)', p, p_perm), ...
+%     sprintf('Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(idxLen), nanmean(idxLen), nanmedian(idxLen)), ...
+%     sprintf('Non-Indexed Trials (#%d; M = %.2f; MED = %.2f)', length(ndxLen), nanmean(ndxLen), nanmedian(ndxLen))});
+% 
+% hold on
+% hand1 = histogram(idxLen, 30:5:120, 'Normalization','probability');
+% hand2 = histogram(ndxLen, 30:5:120, 'Normalization','probability');
+% hand2.FaceColor = [1,0,0];
+% plot([nanmean(idxLen) nanmean(idxLen)], get(gca, 'YLim'), 'color', 'b', 'linew', 4, 'linestyle', '-');
+% plot([nanmean(ndxLen) nanmean(ndxLen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '-');
+% plot([nanmedian(idxLen) nanmedian(idxLen)], get(gca, 'YLim'), 'color', 'b',     'linew', 3, 'linestyle', '--');
+% plot([nanmedian(ndxLen) nanmedian(ndxLen)], get(gca, 'YLim'), 'color', [1 0 0], 'linew', 3, 'linestyle', '--');
+% legend('Indexed', 'Non-Indexed')
 
 
 % VISUALIZE RIPPLE DENSITY

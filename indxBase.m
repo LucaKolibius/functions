@@ -13,19 +13,22 @@ ft_defaults;
 dbstop if error
 dbclear if error
 
+norminv(0.95)
 addpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\fieldtrip-20200603')
 addpath(genpath('\\analyse4.psy.gla.ac.uk\project0309\Luca\functions')); % my functions
 fixDoubleLFP % fix: on the same bundle IU1 indexes trl1 and IU2 does not index trl1. don't count lfp double.
 findIndexSU_hz(99, 1.645, 1.645, 0, 0) % find index units
 lfp2microLFP % save LFP from georges structure into mine 
-% lfp2rpplBund % old
-rppl_statsVisu
+lfp2rpplBund
+rppl_statsVisu % old
+rppl_stats2
 preCuePowDiff % precue Power || try out uniqFreq per freqBand & try out time-frequency
 preCuePowDiff_perm % statistics on it
 spkRppl_ppc
 spkPhase_encRet % favChan
 rpplAnal_powr % ripple power
 rpplAnal_pipe % ripple detection
+visuSU
 
 TW = [1000 5000]; % 1s before and 5s after
 trigCode = [1]; % cue-locked

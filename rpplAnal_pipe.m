@@ -16,11 +16,11 @@ allSUPow.ndx  = [];
 allSUPow.dff  = [];
 allFreqRes    = [];
 
-for spk = 1 : length(allSpks)
+for spk = 1 %: length(allSpks)
     
-    %     if any(isnan(allSpks(spk).idxTrlSingHi))
-    %         continue
-    %     end
+        if any(isnan(allSpks(spk).idxTrlSingHi))
+            continue
+        end
     
     %% GET: bidsID + sesh
     bidsID  = allSpks(spk).bidsID;
@@ -73,23 +73,75 @@ for spk = 1 : length(allSpks)
     
     %% DETECT RIPPLES
     [ripple, bndLab, staEnd, favChan] = calcRppl (microLFP);
-    allSpks(spk).rpplNum = ripple.number;
-    allSpks(spk).rpplLen = ripple.length;
-    allSpks(spk).rpplDen = ripple.density;
+        allSpks(spk).rpplNum = ripple.number;
+        allSpks(spk).rpplLen = ripple.length;
+        allSpks(spk).rpplDen = ripple.density;
     
-    %     %% CALCULATE TRIAL RIPPLE POWER (80-140hz)
-    %     [idxTrlPow, ndxTrlPow, goodTrl, freqRes] = calcRipplPow (microLFP, idxTrl, encTrig, favChan);
-    %
-    %     if sum(idxTrl(logical(goodTrl))) > 0
-    %
-    %         allSUPow.idx  = [ allSUPow.idx  {idxTrlPow}  ];
-    %         allSUPow.ndx  = [ allSUPow.ndx  {ndxTrlPow}  ];
-    %
-    %     end
     
-    %     allFreqRes = [allFreqRes; freqRes];
+%%    GET RAW AVERAGE RIPPLE SHAPE
+    rppl.filt = [];
+    rppl.lfp  = [];
+    for trl = 1: size(staEnd,1)
+        %% CONTINUE IF TRIAL HAS NO RIPPLES
+        if isempty(staEnd{trl,1})
+            continue
+        end
+        
+        rpNum = size(staEnd{trl,1},2);
+        for rip = 1 : rpNum
+            
+            
+            LFP    = microLFP.trial{trl}(favChan,:);
+            filtLFP = ft_preproc_bandpassfilter(microLFP.trial{trl}(favChan,:), 1000, [80 140], 3*fix(1000/80)+1, 'fir', 'twopass');
+            
+%             mStart = staEnd{trl,1}(rip)-50; if mStart<1; mStart = 1; end
+%             mEnd   = staEnd{trl,2}(rip)+50; if mEnd>size(microLFP.trial{trl},2); mEnd = size(microLFP.trial{trl},2); end
+            mStart = staEnd{trl}(rip)-500; if mStart<1; continue; end
+            mEnd   = staEnd{trl}(rip)+500; if mEnd>size(microLFP.trial{trl},2); continue; end
+            
+            LFPrip     = LFP(mStart:mEnd);
+            filtLFPrip = filtLFP(mStart:mEnd);
+            
+%             % zero pad
+%             zeropad = (400-size(LFPrip,2))/2;
+%             switch round(zeropad) == zeropad % is zeropad a full number
+%                 
+%                 case 0 % has decimals
+%                     LFPrip     = [ zeros(1,floor(zeropad)+1) LFPrip        zeros(1,floor(zeropad)) ];
+%                     filtLFPrip = [ zeros(1,floor(zeropad)+1) filtLFPrip    zeros(1,floor(zeropad)) ];
+%                 case 1  % no decimals
+%                     LFPrip     = [ zeros(1,floor(zeropad))   LFPrip        zeros(1,floor(zeropad)) ];
+%                     filtLFPrip = [ zeros(1,floor(zeropad))   filtLFPrip    zeros(1,floor(zeropad)) ];
+%             
+%             end
+%           
+%             if size(LFPrip,2) ~= 400
+%                 error('lfp snippet is not 300 long')
+%             end
+            
+            
+            rppl(spk).lfp  = [ rppl(spk).lfp;  LFPrip  ];
+            rppl(spk).filt = [ rppl(spk).filt; filtLFPrip ];
+        end
+        
+    end
 end
-save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_rppls80to140.mat', 'allSpks', '-v7.3');
+
+%%
+%     % CALCULATE TRIAL RIPPLE POWER (80-140hz)
+%     [idxTrlPow, ndxTrlPow, goodTrl, freqRes] = calcRipplPow (microLFP, idxTrl, encTrig, favChan);
+%
+%     if sum(idxTrl(logical(goodTrl))) > 0
+%
+%         allSUPow.idx  = [ allSUPow.idx  {idxTrlPow}  ];
+%         allSUPow.ndx  = [ allSUPow.ndx  {ndxTrlPow}  ];
+%
+%     end
+
+%     allFreqRes = [allFreqRes; freqRes];
 
 
-end
+% save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_rppls80to140.mat', 'allSpks', '-v7.3');
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\avgRppl.mat', 'rppl', '-v7.3'); % ==> rpplVisu_average_raw_filt
+
+end % END OF FUNCTION

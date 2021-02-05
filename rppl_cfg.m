@@ -44,11 +44,13 @@ tfg.paramOpt.minCyclesNum    = 3; % Scalar representing the minimum number of re
 tfg.doFalseposRjct          = 1; % set to 1 if detected events are checked for their
                                  % frequency profile, i.e. a spectral peak with a
                                  % specific prominence within a specified frequency range
-tfg.falseposRjct.freqlim    = [75 125]; % [freqMin freqMax], frequency range event
+% tfg.falseposRjct.freqlim    = [75 125]; % [freqMin freqMax], frequency range event
+%                                         % should have a spectral maximum
+tfg.falseposRjct.freqlim    = [75 145]; % [freqMin freqMax], frequency range event
                                         % should have a spectral maximum
 tfg.falseposRjct.timePad    = [-0.25 0.25]; % [timeMin timeMax], time padded around
                                             % events to calculate TFRs
-tfg.falseposRjct.tfrFreq    = 65 : 2 : 135; % Frequencies for TFR calculation. Must include freqlim set above
+tfg.falseposRjct.tfrFreq    = 65 : 2 : 155; % Frequencies for TFR calculation. Must include freqlim set above
 tfg.falseposRjct.tfrTime    = -0.1 : 0.002 : 0.1; % Time range of TFR
 tfg.falseposRjct.tfrWin     = ceil(0.1 * tfg.falseposRjct.tfrFreq) ./ tfg.falseposRjct.tfrFreq; % Length of time window for TFR calculation
 tfg.falseposRjct.avgWin     = [-0.05 0.05]; % Time window used for averaging TFR, usual narrowly set around the event, i.e. t = 0 s

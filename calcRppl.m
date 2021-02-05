@@ -36,13 +36,14 @@ for bund = 1 : size(bndLab,1) % currently 1!
         outRipple = Slythm_DetectSpindles_v2(tfg, curData);
         
         try
-        staEndTemp = [{outRipple.evtIndiv.staTime}', {outRipple.evtIndiv.endTime}'];
+            %         staEndTemp = [{outRipple.evtIndiv.staTime}', {outRipple.evtIndiv.endTime}'];
+            staEndTemp = {outRipple.evtIndiv.maxTime}';
         catch
             staEndTemp = [];
         end
-        %% PREALLOCATE
-        numRip = [];
         
+        %% PREALLOCATE
+        numRip = [];  
         rpplLen   = cell(1,size(data.trial,2));
         
         rpplsWire = cell(1,size(data.trial,2));

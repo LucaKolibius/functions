@@ -173,7 +173,7 @@ inputVar.encRetTH  = encRetTH;
 inputVar.afterCue  = afterCue;
 inputVar.afterResp = afterResp;
 
-save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ.mat', 'allSpks', 'resIU', 'resGU', 'inputVar');
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZdist.mat', 'allSpks', 'resIU', 'resGU', 'inputVar', 'permIU', 'permGU' );
 cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj')
 disp(resIU.p);
 
