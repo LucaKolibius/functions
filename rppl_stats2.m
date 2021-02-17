@@ -108,7 +108,7 @@ skpSpk      = zeros(1,length(allSpks));
 
 rpplTms_idx = [];
 rpplTms_ndx = [];
-
+skpSpk = zeros(1,length(allSpks));
 for spk = 1 : length(allSpks)
     
     
@@ -129,17 +129,51 @@ for spk = 1 : length(allSpks)
         continue
     end
     
-    rpplTms_idx = [ rpplTms_idx; allSpks(spk).rpplTms( idxTrl) ];
-    rpplTms_ndx = [ rpplTms_ndx; allSpks(spk).rpplTms(~idxTrl) ];
+    rpplTms_idx = [ rpplTms_idx; allSpks(spk).rpplTms( idxTrl,1:20000) ];
+    rpplTms_ndx = [ rpplTms_ndx; allSpks(spk).rpplTms(~idxTrl,1:20000) ];
 
 end % OF SU LOOP
 
-idxmean = mean(rpplTms_idx,1);
-ndxmean = mean(rpplTms_ndx,1);
+idx = mean(rpplTms_idx,1);
+ndx = mean(rpplTms_ndx,1);
+imagesc([idx;ndx]);
+ylim([0.5 1.5])
+
+figure(1);clf; hold on;
+for ii = 1:size(idx,2)-99
+    downIdx(ii) = mean(idx(ii:ii+99));
+    downNdx(ii) = mean(ndx(ii:ii+99));
+end
+subplot(121); hold on;
+imagesc([downNdx; downIdx]);
+colorbar
+xlim([0000 5000])
+plot([2000 2000], get(gca, 'Ylim'), '--', 'linew', 3, 'color', [1 0 0])
+title('Ripple Timings | Encoding')
+xlabel('Time from cue [ms]')
+yticks([1 2])
+yticklabels({'Ndx Trials', 'Idx Trials'})
+mAx = gca;
+mAx.FontWeight = 'bold';
+mAx.FontSize   = 20;
+
+subplot(122); hold on;
+% figure(2); clf; hold on;
+imagesc(rpplTms_idx)
+plot([2000 2000], get(gca, 'Ylim'), '--', 'linew', 3, 'color', [1 0 0])
+xlim([0 5000])
+ylim([0.5 170.5])
+xlabel('Time from cue [ms]')
+ylabel('Trials');
+title('Ripples during indexed trials | Encoding')
+mAx = gca;
+mAx.FontWeight = 'bold';
+mAx.FontSize   = 20;
+
 
 figure(2); clf; hold on;
-plot(idxmean, 'linew', 2.5, 'color', [0.1059, 0.6196, 0.4667]);
-plot(ndxmean, 'linew', 2.5, 'color', [0.4588, 0.4392, 0.7020]);
+plot(idx, 'linew', 2.5, 'color', [0.1059, 0.6196, 0.4667]);
+plot(ndx, 'linew', 2.5, 'color', [0.4588, 0.4392, 0.7020]);
 xlabel('Time [ms]')
 ylabel('Ripple Density')
 title('Ripple Density Time-Resolved')
