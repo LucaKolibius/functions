@@ -1,4 +1,4 @@
-function [tableTemplate, hitsIdx, missIdx, allTrials, sessionNum, retTrigger, encTrigger, orda, animalCues] = loadLogs(p2d, trls)
+function [tableTemplate, hitsIdx, missIdx, allTrials, sessionNum, retTrigger, encTrigger, retRT, orda, animalCues] = loadLogs(p2d, trls)
 % error('ERLANGEN TRIGGER ARE SAMPLED AT ~32678 Hz');
 % load in TTLs
 cd(p2d)
@@ -398,9 +398,15 @@ for ix=1:size(rawEnc,1)
 end
 allTrials=size(encTrigger,1);
 
+% RETRIEVAL REACTION TIME (retRT)
+rt = cellfun(@str2double, rawRet(:,8), 'un', 0);
+rt = cell2mat(rt);
+retRT = retTrigger(:,2)+rt;
+
 % enc1 und ret1 should be the same stimuli
-retTrigger=[retTrigger cellfun(@str2double, rawRet(:,1))];
-retTrigger=sortrows(retTrigger,4);
+retTrigger = [retTrigger retRT cellfun(@str2double, rawRet(:,1))];
+retTrigger = sortrows(retTrigger,5);
+retRT      = retTrigger(:, 4);
 retTrigger = retTrigger(1:end,1:3); % delete the sorting column
 
 % hits or misses

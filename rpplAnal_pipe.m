@@ -145,11 +145,11 @@ for trl = 1 : length(staEnd)
     end  
     
 end
-allSpks(su).rpplTms = rpplTms;
+allSpks(spk).rpplTms = rpplTms;
 
     
     
-end % END OF TRIAL LOOP
+% end % END OF TRIAL LOOP
 
 end % END OF SU LOOP
 
@@ -169,6 +169,6 @@ end % END OF SU LOOP
 
 % save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\allSpksHZ_rppls80to140.mat', 'allSpks', '-v7.3');
 % save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\avgRppl.mat', 'rppl', '-v7.3'); % ==> rpplVisu_average_raw_filt
-save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\avgRppl.mat', 'rpplDens_time', '-v7.3');
+save('\\analyse4.psy.gla.ac.uk\project0309\Luca\data\allSbj\rpplDens_time.mat', 'allSpks', '-v7.3');
 
 end % END OF FUNCTION
