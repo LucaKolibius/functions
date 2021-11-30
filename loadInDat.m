@@ -1,5 +1,5 @@
 % handles the load-in of data for visuSU
-function [hitsIdx, subj, spksEnc, spksRet, sensTrlsFFPP, animalCues, WS, averageWS, ffTrls, ppTrls] = loadInDat(allSpks, su)
+function [hitsIdx, subj, spksEnc, spksRet, sensTrlsFFPP, animalCues, WS, averageWS, ffTrls, ppTrls, ewp, associates] = loadInDat(allSpks, su)
 sensTrlsFFPP = [];
 ffTrls = [];
 ppTrls = [];
@@ -16,6 +16,7 @@ sr              = allSpks(su).initSR;
 
 encTrig         = allSpks(su).encTrigger(:,[1:3]); % in seconds
 retTrig         = allSpks(su).retTrigger(:,[1:3]); % in seconds
+retRT           = allSpks(su).retRT;
 idxTrl          = allSpks(su).idxTrl;
 hitsIdx         = allSpks(su).hitsIdx;
 wirename        = allSpks(su).wirename;
@@ -25,15 +26,19 @@ cd(sesh)
 abc = dir; cd(abc(3).name);
 
 % ANIMAL CUES
-[~, ~, ~, ~, ~, ~, ~, ~, animalCues] = loadLogs([cd, filesep], idxTrl);
-
+[~, ~, ~, ~, ~, ~, ~, ~, ~, animalCues, associates] = loadLogs([cd, filesep], idxTrl);
 % load single units from processed variable
 % load single units from raw data (old)
 clusterSpikes = allSpks(su).spks/1000;
 
 % adjusted for ENC(-1-113) RET(-1113)
-spksEnc = insertSpiketimes2(encTrig, clusterSpikes, [1 3], [-3 1])'; % 3 seconds prior to cue trigger until 1 second after response trigger
-spksRet = insertSpiketimes2(retTrig, clusterSpikes, [1 3], [-3 3])'; % 3 seconds prior to cue trigger until 3 seconds post response trigger
+spksEnc = insertSpiketimes2(encTrig, clusterSpikes, [1 3], [-3 0])'; % 3 seconds prior to cue trigger until end of trial
+spksRet = insertSpiketimes2(retTrig, clusterSpikes, [1 3], [-3 0])'; % 3 seconds prior to cue trigger until end of trial
+
+% This is to visualize the reinstatement value that goes from enc (cue+2 to
+% end) and ret (cue to response)
+[ewp.enc, ewp.twEnc] = insertSpiketimes2([encTrig(:,1) encTrig(:,3)], clusterSpikes, [1 2], [0 0]);
+[ewp.ret, ewp.twRet] = insertSpiketimes2([retTrig(:,1)   retRT(:,1)],   clusterSpikes, [1 2], [0 0]);
 
 %% WAVESHAPE
 switch allSpks(su).isPos
@@ -145,4 +150,4 @@ averageWS = mean(WS,1);
 %             cd(demGate)
 %         end
 %     end
-% end
+end % END OF FUNCTION

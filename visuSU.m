@@ -2,36 +2,61 @@
 % have spksEnc and spksRet already inverted there
 % SU 21 in the first index neuron session (indexNeuron = 1) is super tonic!
 function visuSU
-whereAmI(0);
+whereAmI;
 global prePath;
 
-savepath = [prePath, '\Luca\SFN2020'];
+savepath = [prePath, '\Luca\visu\SANDERISCONVINCED\'];
 addpath(genpath([prePath, '\Luca\toolboxes\TREBER']));
-load([prePath, 'Luca\data\allSbj\allSpksHZ.mat'], 'allSpks')
+load([prePath, 'Luca\data\allSbj\allSpksHZ_encTwo_retResp.mat'], 'allSpks')
 
-for su = 405%[177, 405]%1:size(allSpks,2)
-    close all
-
-
-
-    if sum(allSpks(su).idxTrl) == 0
-        continue % NO INDEX TRIALS
+for su =  [153 169 174 177 460] %[82 458]%1:size(allSpks,2)
+    
+    if su == 458
+        continue
     end
     
-    [hitsIdx, subjID, spksEnc, spksRet, sensTrlsFFPP, animalCues, WS, averageWS, ffTrls, ppTrls] = loadInDat(allSpks, su);
-    spksEnc = spksEnc'; spksRet = spksRet';
+    close all
+    
+    %% SETUP FIGURE
+    mFigH = figure('units', 'normalized'); clf;
+    %     set(gcf, 'units','normalized','outerposition',[0 0 1 1])
+    
+    MP = get(0, 'MonitorPositions');
+    N = size(MP, 1);
+    % Might want to set an initial position this to some reasonable location
+    % in the event of the window being "Restored Down".
+    newPosition = MP(1,:);
+    
+    if size(MP, 1) == 1
+        % Single monitor
+        set(mFigH,'units','normalized','OuterPosition',[-0.004 0.03 1.008 0.978], 'InnerPosition', [0 0.037 1 0.892]) % fullscreen
+    else
+        % Multiple monitors - shift to the Nth monitor.
+        newPosition(1) = newPosition(1) + MP(N,1);
+    end
+    mFigH.set('Position', newPosition, 'units', 'normalized');
+    mFigH.WindowState = 'maximized'; % Maximize with respect to current monitor.
+     
+    if sum(allSpks(su).idxTrl) < 2
+        continue % I'd like to have at least two reinstated trials
+    end
+    
+    [hitsIdx, subjID, spksEnc, spksRet, sensTrlsFFPP, animalCues, WS, averageWS, ffTrls, ppTrls, ewp, associates] = loadInDat(allSpks, su);
+    %     spksEnc = spksEnc'; spksRet = spksRet';
     
     % make spiketimes to number of spikes
-    spksEncNum = num2cell(cellfun(@length, spksEnc));
-    spksRetNum = num2cell(cellfun(@length, spksRet));
-    spksEncNum = spksEncNum(:,hitsIdx); % get rid of misses
-    spksRetNum = spksRetNum(:,hitsIdx); % get rid of misses
+    spksEncNum = cellfun(@length, ewp.enc) ./ ewp.twEnc;
+    spksRetNum = cellfun(@length, ewp.ret) ./ ewp.twRet;
+    spksEncNum = spksEncNum(hitsIdx); % get rid of misses
+    spksRetNum = spksRetNum(hitsIdx); % get rid of misses
     
-    [~ , normENC, normRET] = normSpikeNumber(spksEncNum, spksRetNum);
+    %     [normENC, normRET]= normSpikeNumber_double(spksEncNum, spksRetNum);
+    normENC = (spksEncNum - mean(spksEncNum)) / std(spksEncNum);
+    normRET = (spksRetNum - mean(spksRetNum)) / std(spksRetNum);
     
     origENC = normENC; % original encoding  trial series (presentation order)
-    origRET = normRET; % original retrieval trial series (presentation order)
-    origDP  = origENC .* origRET; % original dot-product
+    origRET = normRET; % original retrieval trial series (matched to ENC presentation order)
+    origDP  = origENC .* origRET; % original EWP
     
     %% SCALE RASTERPLOT BY EWP
     maxDP = max(origDP);
@@ -41,27 +66,27 @@ for su = 405%[177, 405]%1:size(allSpks,2)
     scalDP(scalDP>1) = 1;
     
     %% DON'T SCALE
-%     scalDP = ones(size(origENC));
+    %     scalDP = ones(size(origENC));
     
     %% Visualization
     timeWindow = [-3 30];
     dt = linspace(timeWindow(1), timeWindow(2), (abs(timeWindow(1)) + abs(timeWindow(2))) *1000+1 );
     ploDT = dt+0.0005; ploDT(end) = [];
     % rasterplot
-    mFigH = figure('units', 'pixels');
-    subplot(6,8,[1:6, 9:14, 17:22, 25:30])
+%     mFigH = figure('units', 'pixels');
+    subplot(6,8,[1:6, 9:14, 17:22, 25:30 33:38])
     
-%     mainTitle = sprintf(['Participant: ', subjID, 'Session: ', allSpks(su).sesh, '  |  SU#%i'], allSpks(su).su);
-%     sgtitle(mainTitle); % we need at least R2018b
+    %     mainTitle = sprintf(['Participant: ', subjID, 'Session: ', allSpks(su).sesh, '  |  SU#%i'], allSpks(su).su);
+    %     sgtitle(mainTitle); % we need at least R2018b
     
     hold on
     n_encHit = [];
     counter1 = 0;
     
     % % Encoding
-%     mBlue = [0 0.4470 0.7410];
-mBlue = [[0.368627450980392,0.235294117647059,0.600000000000000]];
-
+    %     mBlue = [0 0.4470 0.7410];
+    mBlue = [[0.368627450980392,0.235294117647059,0.600000000000000]];
+    
     for trl = 1:size(hitsIdx,1) % trials
         counter1 = counter1+1;
         
@@ -77,21 +102,23 @@ mBlue = [[0.368627450980392,0.235294117647059,0.600000000000000]];
     end
     
     %     title('Rasterplot encoding(blue) + retrieval(red)');
-    ylabel('Trial Number (matched)');
+    yhandRast = ylabel('Trial Number (matched)');
     ylim([0.5 counter1+0.5])
     yticks(0:10:counter1);
     xticks('');
-    mAx = gca;
-    mAx.YAxis.FontWeight = 'bold';
-    mAx.XAxis.FontWeight = 'bold';
-    mAx.FontSize = 16;
-    xlim([-2 20])
+    %     mAx = gca;
+    %     mAx.YAxis.FontWeight = 'bold';
+    %     mAx.XAxis.FontWeight = 'bold';
+    %     mAx.FontSize = 16;
+    set(findobj(gca,'type','axes'),'FontName','Arial','FontSize',16,'FontWeight','Bold', 'LineWidth', 2);
+    
+    xlim([-2 15])
     box on
     
     % % RETRIEVAL
-%     mOrange = [0.8500 0.3250 0.0980];
-mOrange = [[0.901960784313726,0.380392156862745,0.00392156862745098]];
-
+    %     mOrange = [0.8500 0.3250 0.0980];
+    mOrange = [[0.901960784313726,0.380392156862745,0.00392156862745098]];
+    
     hold on
     counter1 = 0;
     n_retHit = [];
@@ -107,8 +134,11 @@ mOrange = [[0.901960784313726,0.380392156862745,0.00392156862745098]];
         end
         [n_retHit(counter1,:),~] = histcounts(x,dt);
     end
-    line([0 0],[0 counter1+1], 'LineStyle','-', 'Color',[0.6 0.6 0.6], 'LineWidth',3)
-    line([2 2],[0 counter1+1], 'LineStyle','-', 'Color',[0.6 0.6 0.6], 'LineWidth',3)
+    line([0 0],[0 counter1+1], 'LineStyle','-', 'Color',[0.6 0.6 0.6 0.5], 'LineWidth',3)
+    line([2 2],[0 counter1+1], 'LineStyle','-', 'Color',[0.6 0.6 0.6 0.5], 'LineWidth',3)
+    
+    line([0 0],[0 counter1+1], 'LineStyle','-', 'Color',[0.6 0.6 0.6 0.5], 'LineWidth',3)
+    line([2 2],[0 counter1+1], 'LineStyle','-', 'Color',[0.6 0.6 0.6 0.5], 'LineWidth',3)
     
     %     for i = 1:size(sensTrlsFFPP,2)
     %         trialNum = sensTrlsFFPP(i);
@@ -116,20 +146,22 @@ mOrange = [[0.901960784313726,0.380392156862745,0.00392156862745098]];
     %     end
     
     %% Trial Series
-    subplot(6,8,[7:8, 15:16, 23:24, 31:32])
+    subplot(6,8,[7:8, 15:16, 23:24, 31:32 39:40])
     hold on
     %                     plotting
-%     plot(origENC, 'linew',3, 'Color', mBlue, 'marker', 'o');
-%     plot(origRET, 'linew',3, 'Color', mOrange, 'marker', 'o');
-% plot(origDP, 'linew',3, 'Color', [0.47,0.67,0.19], 'marker', 'o');
-
-barHand = bar(origDP);
-barHand.FaceColor = (mBlue+mOrange)/2;
-
+    %     plot(origENC, 'linew',3, 'Color', mBlue, 'marker', 'o');
+    %     plot(origRET, 'linew',3, 'Color', mOrange, 'marker', 'o');
+    % plot(origDP, 'linew',3, 'Color', [0.47,0.67,0.19], 'marker', 'o');
+    
+    barHand = bar(origDP);
+    barHand.FaceColor = (mBlue+mOrange)/2;
+    
     %                     aesthetics
     xlim([0.5 length(hitsIdx)+0.5])
+    curY = ylim; 
+    ylim([curY(1) curY(2) + 1]);
     %         hand = legend({'ENC', 'RET', ''});
-    ylabel('Standardized firing rate');
+    ylabel('Reinstatement value');
     xticks('')
     %         xlabel('Trial Number')
     %             title([subjID, sprintf('-SU%.0f', su)]);
@@ -142,23 +174,25 @@ barHand.FaceColor = (mBlue+mOrange)/2;
     axH.XAxisLocation = 'top';
     axH.YAxisLocation = 'right';
     view([90 90])
+    set(findobj(gca,'type','axes'),'FontName','Arial','FontSize',16,'FontWeight','Bold', 'LineWidth', 2);
+    box on
     
-    % this marks only the indexed trials
-    recPos = get(gca,'Ylim');
-    startP = -0.5;
-    for iy = 1 : size(normENC,2)
-        startP = startP+1;
-        if any(iy == allSpks(su).idxTrl)
-            r = rectangle('Position',[startP recPos(1) 1 abs(recPos(1))+abs(recPos(2))],'FaceColor',[0.6 0.6 0.6 0.5]); % dark
-            r.EdgeColor = [1 1 1]; % make edgecolor white
-            %                 elseif ppIdx{suNum}(iy)==1 && sensTrls(iy) ==1
-            %                     r = rectangle('Position',[startP recPos(1) 1 abs(recPos(1))+abs(recPos(2))],'FaceColor',[1 1 1 0.35]); % white
-        end
-    end
+    %     % this marks only the indexed trials
+    %     recPos = get(gca,'Ylim');
+    %     startP = -0.5;
+    %     for iy = 1 : size(normENC,2)
+    %         startP = startP+1;
+    %         if any(1 == allSpks(su).idxTrl)
+    %             r = rectangle('Position',[startP recPos(1) 1 abs(recPos(1))+abs(recPos(2))],'FaceColor',[0.6 0.6 0.6 0.5]); % dark
+    %             r.EdgeColor = [1 1 1]; % make edgecolor white
+    %             %                 elseif ppIdx{suNum}(iy)==1 && sensTrls(iy) ==1
+    %             %                     r = rectangle('Position',[startP recPos(1) 1 abs(recPos(1))+abs(recPos(2))],'FaceColor',[1 1 1 0.35]); % white
+    %         end
+    %     end
     
     
     %% fplot
-    subplot(6,8,[33:38, 41:46])
+    subplot(6,8,[41:46])
     hold on
     
     retIdxSpikes = n_retHit(allSpks(su).idxTrl,:);
@@ -187,34 +221,42 @@ barHand.FaceColor = (mBlue+mOrange)/2;
     
     % plot convolved series
     hold on
-    title('Firing rate during indexed trials')
     plot(ploDT, encConv, 'linew', 3, 'color', mBlue);
     plot(ploDT, retConv, 'linew', 3, 'color', mOrange);
-    ylabel({'Smoothed', 'Occurences', ''})
+    %     ylabel({'Smoothed', 'Occurences', ''})
+    
     box on
     xlabel('Time after cue onset (seconds)')
     xticks([-2 0 2 5:5:20]);
     yticks('')
-    xlim([-2 20])
-
+    xlim([-2 15])
+    
+    yhandFire = ylabel({'Spike density'});
+    newPos    = yhandFire.Position;
+    newPos(1) = yhandRast.Position(1); % align on x axis with rasterplot ylabel
+    yhandFire.Position = newPos;
+      
     xticklabels({'-2', 'Cue Onset', '2', '5', '10', '15', '20'})
     
-    mAx = gca;
-    mAx.YAxis.FontWeight = 'bold';
-    mAx.XAxis.FontWeight = 'bold';
-    mAx.FontSize = 14;
+    %     mAx = gca;
+    %     mAx.YAxis.FontWeight = 'bold';
+    %     mAx.XAxis.FontWeight = 'bold';
+    %     mAx.FontSize = 14;
+    set(findobj(gca,'type','axes'),'FontName','Arial','FontSize',16,'FontWeight','Bold', 'LineWidth', 2);
+    title('Firing rate during reinstated trials', 'FontName', 'Arial', 'FontWeight', 'Bold', 'FontSize', 14)
+
     line([0 0],[get(gca, 'YLim')], 'LineStyle','-', 'Color',[0.6 0.6 0.6], 'LineWidth',3) % cue onset
     line([2 2],[get(gca, 'YLim')], 'LineStyle','-', 'Color',[0.6 0.6 0.6], 'LineWidth',3) % stimulus onset
     
-    hold on
-    L(1) = plot(nan, nan, 'color', mBlue);
-    L(2) = plot(nan, nan, 'color', mOrange);
-    [legPos, hobj, ~, ~] = legend(L, {'Encoding', 'Retrieval'}, 'FontSize',16, 'FontWeight', 'bold');
-    hl = findobj(hobj,'type','line');
-    set(hl,'LineWidth',15);
-    set(legPos, 'Position', [0.033 0.875 0.078 0.061])
-    legend('boxoff');
-
+%     hold on
+%     L(1) = plot(nan, nan, 'color', mBlue);
+%     L(2) = plot(nan, nan, 'color', mOrange);
+%     [legPos, hobj, ~, ~] = legend(L, {'Encoding', 'Retrieval'}, 'FontSize',16, 'FontWeight', 'bold');
+%     hl = findobj(hobj,'type','line');
+%     set(hl,'LineWidth',15);
+%     set(legPos, 'Position', [0.033 0.875 0.078 0.061])
+%     legend('boxoff');
+    
     %     %% frequency plot
     %     sp2H = subplot(4,1,2);
     %     title('Frequency Plot')
@@ -262,78 +304,85 @@ barHand.FaceColor = (mBlue+mOrange)/2;
     %     % draw grey lines
     %     line([0 0],[get(sp2H,'YLim')], 'LineStyle','-', 'Color',[0.6 0.6 0.6], 'LineWidth',3)
     %
-
+    
     %% waveshape
-    figure
-%     subplot(6,8,[39:40])
+    %     figure
+    %     subplot(6,8,[39:40])
+    subplot(6,8,[47 48])
+    
     density_plot(WS, [1:size(WS,1)], 1);
-    title(sprintf('Waveshapes (%d Spikes)', size(WS,1)))
-    xlabel('Seconds')
-    caYticks = yticks;
-    try
-    yticks([caYticks(1) 0 caYticks(end)]) % this produces an error if the first tick in the current yticks is a 0 already making this [0 0 X];
-    catch
-    end
-    
-    axH = gca;
-    axH.YAxis.FontWeight = 'bold';
-    axH.XAxis.FontWeight = 'bold';
-    axH.FontSize = 12;
-    axH.YLabel.VerticalAlignment = 'middle';
-    axH.XLabel.VerticalAlignment = 'cap';
-    
+
+    %%
+    subplot(6,8,[41:46])
+    yhandFire = ylabel({'Spike density'});
+    newPos = yhandFire.Position;
+    newPos(1) = yhandRast.Position(1); % align on x axis with rasterplot ylabel
+    yhandFire.Position = newPos;
+
     %% animal cue
-%     load([prePath, '\Luca\data\allSbj\anCueNames.mat'], 'anCueNames');
-%     nperm = 1;
-%     
-%     simil = zeros(1,nperm);
-%     for ia=1:nperm
-%         idx = randperm(size(anCueNames,1),2);
-%         [vec1, vec2] = anCueNames{idx,3};
-%         simil(ia) = cosSimil(vec1,vec2);
-%     end
-%     word2vec_th = prctile(simil,word2vec_plvl);
-%     
+    %  get cosine similarity between two animals
+    %     load([prePath, '\Luca\data\allSbj\anCueNames.mat'], 'anCueNames');
+    %     nperm = 1;
     %
-%     load('X:\Luca\anCueNames.mat', 'anCueNames');
+    %     simil = zeros(1,nperm);
+    %     for ia=1:nperm
+    %         idx = randperm(size(anCueNames,1),2);
+    %         [vec1, vec2] = anCueNames{idx,3};
+    %         simil(ia) = cosSimil(vec1,vec2);
+    %     end
+    %     word2vec_th = prctile(simil,word2vec_plvl);
+    
+    
+    load([prePath, 'Luca\old stuff\anCueNames.mat'], 'anCueNames');
     numSignTrls = size(animalCues,2);
     if strcmp(animalCues{1}(end-2:end),'bmp')
         %         cd('Z:\Luca\Github\FacePlace-task\EMpairs_v5_2017-09-11\image_data\EMtune\fVSp_resized\empairs_cropped');
         cd([prePath, '\Luca\exp_code\FacePlace-task\EMpairs_v5_2017-09-11\image_data\EMtune\fVSp_resized\empairs_cropped']);
     elseif strcmp(animalCues{1}(end-2:end),'jpg')
         %         cd('Z:\Luca\Github\FacePlace-task\EMpairs_v5_2017-09-11\image_data\EMtune\formatted_180-180')
-%         cd('X:\Luca\expStimuli\formatted_180-180')
+        %         cd('X:\Luca\expStimuli\formatted_180-180')
         cd([prePath, '\Luca\exp_code\FacePlace-task\EMpairs_v5_2017-09-11\image_data\EMtune\formatted_180-180']);
     end
     
-%     % find the most different animal cues if there are more than two trials
-%     empSimi = [];
-%     comp = [];
-%     for it = 1:numSignTrls
-%         vec1 = anCueNames{ismember(anCueNames(:,1), animalCues(it)),3};
-%         for iz = 1:numSignTrls
-%             if iz == it || iz<it
-%                 continue
-%             end
-%             vec2 = anCueNames{ismember(anCueNames(:,1), animalCues(iz)),3};
-%             empSimi = [empSimi cosSimil(vec1, vec2)];
-%             
-%             comp = [comp, [{animalCues(it)}; {animalCues(iz)}]];
-%         end
-%     end
-%     [minVal,minIdx] = min(empSimi); % the two animals with the greatest distance
-%     chooseAni = [comp{:,minIdx}];
+    %     % find the most different animal cues if there are more than two trials
+    %     empSimi = [];
+    %     comp = [];
+    %     for it = 1:numSignTrls
+    %         vec1 = anCueNames{ismember(anCueNames(:,1), animalCues(it)),3};
+    %         for iz = 1:numSignTrls
+    %             if iz == it || iz<it
+    %                 continue
+    %             end
+    %             vec2 = anCueNames{ismember(anCueNames(:,1), animalCues(iz)),3};
+    %             empSimi = [empSimi cosSimil(vec1, vec2)];
+    %
+    %             comp = [comp, [{animalCues(it)}; {animalCues(iz)}]];
+    %         end
+    %     end
+    %     [minVal,minIdx] = min(empSimi); % the two animals with the greatest distance
+    %     chooseAni = [comp{:,minIdx}];
     
-chooseAni = animalCues;
-
-% UNCOMMENT IF YOU WANT TO HAVE THE ANIMAL CUE
-    for anCue = 1:size(chooseAni,2)
-        if anCue > 2
-            continue
-        end
+    chooseAni = animalCues';
+    chooseAni = [chooseAni, associates];
+    chooseAni = chooseAni';
+    
+    %% SAVING
+%     saveas(gcf, [savepath, 'visuIU_',subjID, '_SU',num2str(su)], 'svg'); % emf, svg
         
-        anCuePos = [47, 48];
-        subplot(6, 8, anCuePos(anCue))
+%% ANIMAL CUE AND ASSOCIATE IMAGES
+    figure(2); clf;
+    cntr = 1;
+    % UNCOMMENT IF YOU WANT TO HAVE THE ANIMAL CUE
+    for anCue = 1:numel(chooseAni)
+%         if anCue > 2
+%             continue
+%         end
+        
+%         anCuePos = [47, 48];
+                subplot(size(chooseAni,2),3,cntr)
+        
+%         subplot(6,8,anCuePos(anCue))
+        
         ylim([0 1])
         xlim([0 1])
         imName = char(chooseAni(anCue));
@@ -344,41 +393,45 @@ chooseAni = animalCues;
         
         axis off
         axis square
+        
+        cntr = cntr + 1;
     end
-
-%     title(sprintf('Similarity: %.3f (90%%-th: %.3f)', minVal, word2vec_th))
-%     mAx = gca;
-%     mAx.Title.Position = [0.0500 1.5 0];
+    
+    %     title(sprintf('Similarity: %.3f (90%%-th: %.3f)', minVal, word2vec_th))
+    %     mAx = gca;
+    %     mAx.Title.Position = [0.0500 1.5 0];
     
     %% saving image
     cd(savepath)
     
-    % maximize figure on screen. adapted for 1 to N monitors.
-    %    % Get pixel position of monitors.
-    MP = get(0, 'MonitorPositions');
-    N = size(MP, 1);
-    % Might want to set an initial position this to some reasonable location
-    % in the event of the window being "Restored Down".
-    newPosition = MP(1,:);
-    
-    if size(MP, 1) == 1
-        % Single monitor
-        set(mFigH,'units','normalized','OuterPosition',[-0.004 0.03 1.008 0.978], 'InnerPosition', [0 0.037 1 0.892]) % fullscreen
-    else
-        % Multiple monitors - shift to the Nth monitor.
-        newPosition(1) = newPosition(1) + MP(N,1);
-    end
-    mFigH.set('Position', newPosition, 'units', 'normalized');
-    mFigH.WindowState = 'maximized'; % Maximize with respect to current monitor.
-    
-    saveas(gcf, ['BvisuSU_',subjID, '_SU',num2str(su)], 'svg'); % emf
-%     catch err
-%         fprintf(1,'The identifier was:\n%s',err.identifier);
-%         fprintf(2,'There was an error! The message was:\n%s',err.message);
-%         disp('Catching.');
-%         continue
+%     % maximize figure on screen. adapted for 1 to N monitors.
+%     %    % Get pixel position of monitors.
+%     MP = get(0, 'MonitorPositions');
+%     N = size(MP, 1);
+%     % Might want to set an initial position this to some reasonable location
+%     % in the event of the window being "Restored Down".
+%     newPosition = MP(1,:);
+%     
+%     if size(MP, 1) == 1
+%         % Single monitor
+%         set(mFigH,'units','normalized','OuterPosition',[-0.004 0.03 1.008 0.978], 'InnerPosition', [0 0.037 1 0.892]) % fullscreen
+%     else
+%         % Multiple monitors - shift to the Nth monitor.
+%         newPosition(1) = newPosition(1) + MP(N,1);
 %     end
+%     mFigH.set('Position', newPosition, 'units', 'normalized');
+%     mFigH.WindowState = 'maximized'; % Maximize with respect to current monitor.
+    
+    saveas(gcf, [savepath, 'visuIUcue_',subjID, '_SU',num2str(su)], 'png'); % emf, svg
+    %     catch err
+    %         fprintf(1,'The identifier was:\n%s',err.identifier);
+    %         fprintf(2,'There was an error! The message was:\n%s',err.message);
+    %         disp('Catching.');
+    %         continue
+    %     end
 end
+    cd(savepath)
+
 end % end of function
 
 % tt = [allSpks.iu];

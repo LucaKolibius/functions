@@ -1,4 +1,4 @@
-function [tableTemplate, hitsIdx, missIdx, allTrials, sessionNum, retTrigger, encTrigger, retRT, orda, animalCues] = loadLogs(p2d, trls)
+function [tableTemplate, hitsIdx, missIdx, allTrials, sessionNum, retTrigger, encTrigger, retRT, orda, animalCues, associates, himiDx] = loadLogs(p2d, trls)
 % error('ERLANGEN TRIGGER ARE SAMPLED AT ~32678 Hz');
 % load in TTLs
 cd(p2d)
@@ -14,8 +14,13 @@ ModeArray = [];
 EVfile = dir([p2d,'*nev']);
 
 % [TimeStampsTTL, ttls, HdrTTL] = Nlx2MatEV(EVfile.name, FieldSelection, ExtractHeader, ExtractMode, ModeArray );
-cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
-[TimeStampsTTL, ttls, ~] = Nlx2MatEV([EVfile.folder, filesep, EVfile.name], FieldSelection, ExtractHeader, ExtractMode, ModeArray );
+try
+    cd('\\analyse4.psy.gla.ac.uk\project0309\Luca\toolboxes\Neuralynx_19012019\') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
+catch
+    cd('/analyse/Project0309/Luca/toolboxes/Neuralynx_19012019') % after restarting the neuralynx function does not find the path to a mex file, unless you cd into that folder
+end
+
+[TimeStampsTTL, ttls, ~] = Nlx2MatEV([p2d, filesep, EVfile.name], FieldSelection, ExtractHeader, ExtractMode, ModeArray );
 % [timestampsCSC, dataSamplesCSC,hdrCSC] = Nlx2MatCSC([p2d,CSCfiles(it).name], FieldSelection, ExtractHeader, ExtractMode, []);% import the raw data
 
 cd(p2d)
@@ -430,6 +435,20 @@ for ia=1:size(respCorr,1)
     end
 end
 
+% hit himi miss
+himiDx = [];
+for ia = 1:size(respCorr,1)
+    if sum(respCorr(ia, 2:3)) == 2
+        himiDx(ia,1) = 1; % HIT
+    elseif sum(respCorr(ia,2:3)) == 1
+        himiDx(ia,1) = 2; % HALF HIT
+    elseif sum(respCorr(ia,2:3)) == 0
+        himiDx(ia,1) = 3; % MISS
+    else
+        error('There is a mistake here');
+    end
+end
+
 %% making the table
 tempCell=[];
 trials=[];
@@ -456,5 +475,13 @@ orda = orda(:,2);
 %% animal cue
 % trls is refering to hits only
 animalCues = [rawEnc{hitsIdx(trls),2}];
+
+ass1 = vertcat(rawEnc{hitsIdx(trls),3});
+ass2 = vertcat(rawEnc{hitsIdx(trls),4});
+
+associates = [ass1 ass2];
+
+% fptrl = sum(contains(associates,'f_'),2) == 1;
+% associates(fptrl,:) = [];
 end
 
